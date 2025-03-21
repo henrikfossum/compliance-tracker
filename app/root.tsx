@@ -6,6 +6,7 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
+// In app/root.tsx
 export default function App() {
   return (
     <html>
@@ -19,6 +20,8 @@ export default function App() {
         />
         <Meta />
         <Links />
+        {/* Add this line to include your script */}
+        <script src="/script.js"></script>
       </head>
       <body>
         <Outlet />
