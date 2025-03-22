@@ -1,14 +1,5 @@
-# The extension name and description
-name = "Compliance Tracker"
-description = "Displays compliance information on your store"
-
-# The extension type
-type = "theme"
-
-# Extension capabilities
-[capabilities]
-  block_progress = true
-
-# Extension configuration
-[settings]
-  handle = "compliance-tracker"
+name = "Compliance Banner"
+type = "theme_app_extension"
+identifier = "com.ithappens.compliance-banner"
+version = "0.1.0"
+description = "A theme app extension that displays a compliance banner on storefront pages to ensure pricing compliance with Norwegian regulations."
