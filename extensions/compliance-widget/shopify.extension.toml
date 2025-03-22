@@ -1,0 +1,14 @@
+# The extension name and description
+name = "Compliance Tracker"
+description = "Displays compliance information on your store"
+
+# The extension type
+type = "theme"
+
+# Extension capabilities
+[capabilities]
+  block_progress = true
+
+# Extension configuration
+[settings]
+  handle = "compliance-tracker"

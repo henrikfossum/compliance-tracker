@@ -1,0 +1,10 @@
+<div id="compliance-banner" style="position: fixed; bottom: 20px; left: 20px; background-color: #2ecc71; color: white; padding: 10px; border-radius: 5px; z-index: 9999; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+  <div style="display: flex; align-items: center;">
+    <img src="{{ 'thumbs-up.png' | asset_url }}" alt="Compliance" style="width: 24px; height: 24px; margin-right: 10px;">
+    <div>
+      <strong>{{ 'compliance.banner.title' | t }}</strong>
+      <p style="margin: 5px 0 0 0;">{{ 'compliance.banner.text' | t }}</p>
+    </div>
+    <button onclick="document.getElementById('compliance-banner').style.display='none';" style="background: transparent; border: none; color: white; margin-left: 15px; cursor: pointer; font-size: 20px;">&times;</button>
+  </div>
+</div>

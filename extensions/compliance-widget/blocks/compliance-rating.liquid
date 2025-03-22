@@ -1,0 +1,64 @@
+{% comment %}
+  @name Compliance Banner
+  @description Displays a compliance banner at the bottom of the page
+  @icon check-circle
+  @category tools
+{% endcomment %}
+
+<div data-compliance-banner>
+  {% render 'compliance-banner' %}
+</div>
+
+{% schema %}
+{
+  "name": "Compliance Banner",
+  "target": "body",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enable_banner",
+      "label": "Enable compliance banner",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "custom_title",
+      "label": "Custom title",
+      "info": "Override the default title"
+    },
+    {
+      "type": "textarea",
+      "id": "custom_message",
+      "label": "Custom message",
+      "info": "Override the default message"
+    },
+    {
+      "type": "color",
+      "id": "banner_color",
+      "label": "Banner color",
+      "default": "#2ecc71"
+    }
+  ]
+}
+{% endschema %}
+
+{% if block.settings.enable_banner %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var banner = document.getElementById('compliance-banner');
+    if (banner) {
+      {% if block.settings.banner_color != blank %}
+        banner.style.backgroundColor = '{{ block.settings.banner_color }}';
+      {% endif %}
+      
+      {% if block.settings.custom_title != blank %}
+        banner.querySelector('strong').innerText = '{{ block.settings.custom_title | escape }}';
+      {% endif %}
+      
+      {% if block.settings.custom_message != blank %}
+        banner.querySelector('p').innerText = '{{ block.settings.custom_message | escape }}';
+      {% endif %}
+    }
+  });
+</script>
+{% endif %}
