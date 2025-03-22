@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "9f0198e2ef79dda2cea9e4cba2e9cfa1"
-application_url = "https://peninsula-motorcycles-bags-russia.trycloudflare.com"
+application_url = "https://occurred-blind-diana-excess.trycloudflare.com"
 embedded = true
 name = "compliance-tracker"
 handle = "compliance-tracker"
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://peninsula-motorcycles-bags-russia.trycloudflare.com/auth/callback",
-  "https://peninsula-motorcycles-bags-russia.trycloudflare.com/auth/shopify/callback",
-  "https://peninsula-motorcycles-bags-russia.trycloudflare.com/api/auth/callback"
+  "https://occurred-blind-diana-excess.trycloudflare.com/auth/callback",
+  "https://occurred-blind-diana-excess.trycloudflare.com/auth/shopify/callback",
+  "https://occurred-blind-diana-excess.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

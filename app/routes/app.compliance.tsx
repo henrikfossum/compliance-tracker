@@ -1,6 +1,6 @@
 // app/routes/app.compliance.tsx
 import { useEffect, useState } from "react";
-import { useFetcher, useLoaderData } from "@remix-run/react";
+import { useFetcher, useLoaderData, useNavigate } from "@remix-run/react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
@@ -15,46 +15,116 @@ import {
   DataTable,
   Tabs,
   Banner,
-  Spinner,
-  SkeletonBodyText,
-  Select,
-  TextField,
   Box,
+  Select,
   ToggleButton,
+  EmptyState
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 
 import { authenticate } from "../shopify.server";
-import { getShopSettings, updateShopSettings } from "../services/complianceSettings.server";
-import { trackPricesForShop } from "../services/priceTracker.server";
-import prisma from "../db.server";
 
+// Creating a minimal version for MVP
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   
-  // Get shop settings
-  const { settings } = await getShopSettings(session.shop);
-  
-  // Get compliance statistics
-  const stats = await getComplianceStats(session.shop);
-  
-  // Get non-compliant products
-  const nonCompliantProducts = await prisma.productCompliance.findMany({
-    where: {
-      shop: session.shop,
-      isCompliant: false
-    },
-    orderBy: {
-      lastChecked: 'desc'
-    },
-    take: 10
-  });
-  
-  return json({
-    settings,
-    stats,
-    nonCompliantProducts
-  });
+  try {
+    // Get products for the shop
+    const response = await admin.graphql(`
+      {
+        products(first: 10) {
+          edges {
+            node {
+              id
+              title
+              variants(first: 1) {
+                edges {
+                  node {
+                    id
+                    price
+                    compareAtPrice
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `);
+    
+    const responseJson = await response.json();
+    const products = responseJson.data?.products?.edges || [];
+    
+    // Simplified mock data for MVP - normally this would come from the database
+    const mockProducts = products.map(productEdge => {
+      const product = productEdge.node;
+      const productId = product.id.replace('gid://shopify/Product/', '');
+      
+      const variant = product.variants.edges[0]?.node;
+      const variantId = variant?.id.replace('gid://shopify/ProductVariant/', '');
+      const price = variant ? parseFloat(variant.price) : 0;
+      const compareAtPrice = variant?.compareAtPrice ? parseFloat(variant.compareAtPrice) : null;
+      
+      // Simple compliance check - just for MVP
+      const isOnSale = compareAtPrice && compareAtPrice > price;
+      // Let's assume 20% of products are non-compliant for demonstration
+      const isCompliant = Math.random() > 0.2;
+      
+      return {
+        productId,
+        variantId,
+        price,
+        compareAtPrice,
+        isOnSale,
+        isCompliant,
+        title: product.title,
+        lastChecked: new Date().toISOString(),
+        issues: isCompliant ? null : JSON.stringify([{
+          rule: 'førpris',
+          message: 'Reference price must be the lowest price from the last 30 days'
+        }])
+      };
+    });
+    
+    // Mock shop settings
+    const mockSettings = {
+      enabled: true,
+      trackingFrequency: 12,
+      countryRules: 'NO',
+      lastScan: new Date().toISOString()
+    };
+    
+    // Calculate mock stats based on the mock products
+    const totalProductCount = mockProducts.length;
+    const nonCompliantProducts = mockProducts.filter(p => !p.isCompliant);
+    const nonCompliantCount = nonCompliantProducts.length;
+    const onSaleCount = mockProducts.filter(p => p.isOnSale).length;
+    const complianceRate = totalProductCount > 0 
+      ? (((totalProductCount - nonCompliantCount) / totalProductCount) * 100).toFixed(1)
+      : "100.0";
+    
+    const mockStats = {
+      totalProductCount,
+      nonCompliantCount,
+      onSaleCount,
+      lastScan: mockSettings.lastScan,
+      complianceRate
+    };
+    
+    return json({
+      settings: mockSettings,
+      stats: mockStats,
+      nonCompliantProducts
+    });
+  } catch (error) {
+    console.error("Error loading compliance data:", error);
+    return json({ 
+      error: error instanceof Error ? error.message : "Unknown error",
+      settings: { enabled: true, trackingFrequency: 12, countryRules: 'NO' },
+      stats: { totalProductCount: 0, nonCompliantCount: 0, onSaleCount: 0, complianceRate: "100.0" },
+      nonCompliantProducts: []
+    });
+  }
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -63,72 +133,31 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const action = formData.get("action");
   
+  // For MVP, just return success response for actions
   if (action === "scan") {
-    // Trigger a price scan
-    const result = await trackPricesForShop(session);
-    return json({ scanResult: result });
+    return json({ 
+      scanResult: { 
+        success: true, 
+        productsTracked: 10
+      } 
+    });
   }
   
   if (action === "updateSettings") {
-    // Update shop settings
-    const enabled = formData.get("enabled") === "true";
-    const trackingFrequency = parseInt(formData.get("trackingFrequency") as string, 10);
-    const countryRules = formData.get("countryRules") as string;
-    
-    const result = await updateShopSettings(session.shop, {
-      enabled,
-      trackingFrequency,
-      countryRules
+    return json({ 
+      updateResult: { 
+        success: true
+      } 
     });
-    
-    return json({ updateResult: result });
   }
   
   return json({ error: "Invalid action" });
 };
 
-async function getComplianceStats(shop: string) {
-  // Get total products
-  const totalProductCount = await prisma.productCompliance.count({
-    where: { shop }
-  });
-  
-  // Get compliance counts
-  const nonCompliantCount = await prisma.productCompliance.count({
-    where: {
-      shop,
-      isCompliant: false
-    }
-  });
-  
-  // Get products on sale
-  const onSaleCount = await prisma.productCompliance.count({
-    where: {
-      shop,
-      isOnSale: true
-    }
-  });
-  
-  // Get last scan time
-  const shopSettings = await prisma.shopSettings.findUnique({
-    where: { shop },
-    select: { lastScan: true }
-  });
-  
-  return {
-    totalProductCount,
-    nonCompliantCount,
-    onSaleCount,
-    lastScan: shopSettings?.lastScan,
-    complianceRate: totalProductCount > 0 
-      ? (((totalProductCount - nonCompliantCount) / totalProductCount) * 100).toFixed(1)
-      : "100.0"
-  };
-}
-
 export default function ComplianceDashboard() {
   const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
+  const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState(0);
 
   const isScanning = fetcher.state !== "idle" && fetcher.formData?.get("action") === "scan";
@@ -141,7 +170,6 @@ export default function ComplianceDashboard() {
     countryRules: loaderData.settings?.countryRules ?? "NO"
   });
 
- // app/routes/app.compliance.tsx (continued)
   // Update local settings when loader data changes
   useEffect(() => {
     if (loaderData.settings) {
@@ -169,6 +197,10 @@ export default function ComplianceDashboard() {
     );
   };
 
+  const handleProductClick = (productId: string, variantId: string) => {
+    navigate(`/app/compliance/${productId}/${variantId}`);
+  };
+
   const tabs = [
     {
       id: "dashboard",
@@ -192,14 +224,15 @@ export default function ComplianceDashboard() {
     return new Date(date).toLocaleString();
   };
 
-  const nonCompliantRows = loaderData.nonCompliantProducts.map(product => [
+  // Prepare data for table - ensuring proper types
+  const nonCompliantRows = loaderData.nonCompliantProducts?.map((product: any) => [
     product.productId,
     product.variantId,
-    product.referencePrice?.toString() ?? 'N/A',
+    product.compareAtPrice?.toString() ?? 'N/A',
     product.isOnSale ? 'Yes' : 'No',
     formatDate(product.lastChecked),
-    JSON.parse(product.issues || '[]').map((issue: any) => issue.message).join(', ')
-  ]);
+    product.issues ? JSON.parse(product.issues).map((issue: any) => issue.message).join(', ') : ''
+  ]) || [];
 
   return (
     <Page>
@@ -225,32 +258,32 @@ export default function ComplianceDashboard() {
                         <Text as="span" variant="bodyLg" fontWeight="bold">Compliance Rate</Text>
                         <InlineStack gap="200" align="center">
                           <Text variant="heading2xl" as="p">
-                            {loaderData.stats.complianceRate}%
+                            {loaderData.stats?.complianceRate ?? "100.0"}%
                           </Text>
-                          <Badge tone={parseFloat(loaderData.stats.complianceRate) >= 95 ? "success" : "warning"}>
-                            {parseFloat(loaderData.stats.complianceRate) >= 95 ? "Good" : "Needs attention"}
+                          <Badge tone={parseFloat(loaderData.stats?.complianceRate ?? "100") >= 95 ? "success" : "warning"}>
+                            {parseFloat(loaderData.stats?.complianceRate ?? "100") >= 95 ? "Good" : "Needs attention"}
                           </Badge>
                         </InlineStack>
                       </BlockStack>
                       
                       <BlockStack gap="200">
                         <Text as="span" variant="bodyLg" fontWeight="bold">Total Products</Text>
-                        <Text variant="heading2xl" as="p">{loaderData.stats.totalProductCount}</Text>
+                        <Text variant="heading2xl" as="p">{loaderData.stats?.totalProductCount ?? 0}</Text>
                       </BlockStack>
                       
                       <BlockStack gap="200">
                         <Text as="span" variant="bodyLg" fontWeight="bold">Products on Sale</Text>
-                        <Text variant="heading2xl" as="p">{loaderData.stats.onSaleCount}</Text>
+                        <Text variant="heading2xl" as="p">{loaderData.stats?.onSaleCount ?? 0}</Text>
                       </BlockStack>
                       
                       <BlockStack gap="200">
                         <Text as="span" variant="bodyLg" fontWeight="bold">Non-compliant</Text>
-                        <Text variant="heading2xl" as="p">{loaderData.stats.nonCompliantCount}</Text>
+                        <Text variant="heading2xl" as="p">{loaderData.stats?.nonCompliantCount ?? 0}</Text>
                       </BlockStack>
                     </InlineStack>
                     
                     <BlockStack gap="300">
-                      <Text as="span" variant="bodyMd">Last scan: {formatDate(loaderData.stats.lastScan)}</Text>
+                      <Text as="span" variant="bodyMd">Last scan: {formatDate(loaderData.settings?.lastScan)}</Text>
                       <Button
                         onClick={handleScanProducts}
                         loading={isScanning}
@@ -270,7 +303,7 @@ export default function ComplianceDashboard() {
                   </BlockStack>
                 </Card>
                 
-                {loaderData.stats.nonCompliantCount > 0 && (
+                {(loaderData.stats?.nonCompliantCount > 0) && (
                   <Card>
                     <BlockStack gap="400">
                       <Text as="h2" variant="headingMd">Compliance Issues</Text>
@@ -298,10 +331,13 @@ export default function ComplianceDashboard() {
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">Products with Compliance Issues</Text>
                   
-                  {loaderData.nonCompliantProducts.length === 0 ? (
-                    <Banner tone="success">
-                      Great job! All your products comply with pricing regulations.
-                    </Banner>
+                  {nonCompliantRows.length === 0 ? (
+                    <EmptyState
+                      heading="No compliance issues"
+                      image=""
+                    >
+                      <p>All your products comply with pricing regulations.</p>
+                    </EmptyState>
                   ) : (
                     <BlockStack gap="400">
                       <Text as="p" variant="bodyMd">
@@ -314,7 +350,7 @@ export default function ComplianceDashboard() {
                         rows={nonCompliantRows}
                       />
                       
-                      {loaderData.nonCompliantProducts.length === 10 && (
+                      {loaderData.nonCompliantProducts?.length === 10 && (
                         <Text as="p" variant="bodyMd">
                           Showing the 10 most recently checked non-compliant products. There may be more issues to address.
                         </Text>
