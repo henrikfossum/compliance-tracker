@@ -1,13 +1,10 @@
-// This is your Prisma schema file,
+// This is your Prisma schema file
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
-// enough when changing adapters.
-// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
   provider = "sqlite"
   url      = "file:dev.sqlite"
@@ -31,4 +28,51 @@ model Session {
   emailVerified Boolean?  @default(false)
 }
 
+model PriceHistory {
+  id             String    @id @default(uuid())
+  shop           String
+  productId      String
+  variantId      String
+  price          Float
+  compareAtPrice Float?
+  timestamp      DateTime  @default(now())
+  isReference    Boolean   @default(false)
 
+  @@index([shop, productId, variantId])
+  @@index([timestamp])
+}
+
+model ComplianceRule {
+  id           String    @id @default(uuid())
+  countryCode  String
+  ruleType     String    // "førpris", "salesDuration", "salesFrequency", etc.
+  parameters   String    // JSON string with rule-specific parameters
+  description  String?
+  active       Boolean   @default(true)
+  
+  @@index([countryCode, ruleType])
+}
+
+model ProductCompliance {
+  id             String    @id @default(uuid())
+  shop           String
+  productId      String
+  variantId      String
+  referencePrice Float?
+  lastChecked    DateTime  @default(now())
+  isOnSale       Boolean   @default(false)
+  saleStartDate  DateTime?
+  isCompliant    Boolean   @default(true)
+  issues         String?   // JSON string with compliance issues
+
+  @@unique([shop, productId, variantId])
+}
+
+model ShopSettings {
+  id                String    @id @default(uuid())
+  shop              String    @unique
+  enabled           Boolean   @default(true)
+  trackingFrequency Int       @default(12) // hours
+  lastScan          DateTime?
+  countryRules      String    // Comma-separated country codes
+}
