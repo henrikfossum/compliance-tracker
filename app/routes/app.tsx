@@ -52,6 +52,16 @@ export default function App() {
             },
           ]}
         />
+        <Navigation.Section
+          title="Tools"
+          items={[
+            {
+              label: 'Create Demo Data',
+              onClick: () => navigate('/app/populate-demo-data'),
+              selected: location.pathname === '/app/populate-demo-data',
+            },
+          ]}
+        />
       </Navigation>
     ),
     [location.pathname, navigate]
