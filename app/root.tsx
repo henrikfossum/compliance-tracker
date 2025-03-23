@@ -1,13 +1,32 @@
+// In app/root.tsx
 import {
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "@remix-run/react";
+import { json } from "@remix-run/node";
+
+export const links = () => [
+  {
+    rel: "stylesheet",
+    href: "https://unpkg.com/@shopify/polaris@12.0.0/build/esm/styles.css",
+  },
+];
+
+// Add this function to get the API key from environment variables
+export const loader = async () => {
+  return json({
+    apiKey: process.env.SHOPIFY_API_KEY || "",
+  });
+};
 
 // In app/root.tsx
 export default function App() {
+  const { apiKey } = useLoaderData<typeof loader>();
+  
   return (
     <html>
       <head>
@@ -20,7 +39,13 @@ export default function App() {
         />
         <Meta />
         <Links />
-        {/* Remove the direct script tag - we'll use Remix's asset handling */}
+        {/* Add the App Bridge script */}
+        {apiKey && (
+          <script
+            src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
+            data-api-key={apiKey}
+          />
+        )}
       </head>
       <body>
         <Outlet />

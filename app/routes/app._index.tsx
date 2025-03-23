@@ -10,15 +10,15 @@ import {
   BlockStack,
   Box,
   List,
-  Link,
+  Link as PolarisLink,
   InlineStack,
 } from "@shopify/polaris";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
+import { Link } from "@remix-run/react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-
   return null;
 };
 
@@ -59,8 +59,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   );
   const responseJson = await response.json();
 
-  const product = responseJson.data!.productCreate!.product!;
-  const variantId = product.variants.edges[0]!.node!.id!;
+  const product = responseJson.data?.productCreate?.product;
+  if (!product) {
+    throw new Error("Failed to create product");
+  }
+
+  const variantId = product.variants.edges[0]?.node?.id;
+  if (!variantId) {
+    throw new Error("Product variant not found");
+  }
 
   const variantResponse = await admin.graphql(
     `#graphql
@@ -85,20 +92,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const variantResponseJson = await variantResponse.json();
 
   return {
-    product: responseJson!.data!.productCreate!.product,
-    variant:
-      variantResponseJson!.data!.productVariantsBulkUpdate!.productVariants,
+    product: responseJson.data?.productCreate?.product,
+    variant: variantResponseJson.data?.productVariantsBulkUpdate?.productVariants,
   };
 };
 
 export default function Index() {
   const fetcher = useFetcher<typeof action>();
-
   const shopify = useAppBridge();
+  
   const isLoading =
     ["loading", "submitting"].includes(fetcher.state) &&
     fetcher.formMethod === "POST";
-  const productId = fetcher.data?.product?.id.replace(
+    
+  const productId = fetcher.data?.product?.id?.replace(
     "gid://shopify/Product/",
     "",
   );
@@ -108,14 +115,15 @@ export default function Index() {
       shopify.toast.show("Product created");
     }
   }, [productId, shopify]);
+  
   const generateProduct = () => fetcher.submit({}, { method: "POST" });
 
   return (
     <Page>
-      <TitleBar title="Remix app template">
-        <button variant="primary" onClick={generateProduct}>
+      <TitleBar title="Price Compliance Tracker">
+        <Button variant="primary" onClick={generateProduct}>
           Generate a product
-        </button>
+        </Button>
       </TitleBar>
       <BlockStack gap="500">
         <Layout>
@@ -128,25 +136,25 @@ export default function Index() {
                   </Text>
                   <Text variant="bodyMd" as="p">
                     This embedded app template uses{" "}
-                    <Link
+                    <PolarisLink
                       url="https://shopify.dev/docs/apps/tools/app-bridge"
                       target="_blank"
                       removeUnderline
                     >
                       App Bridge
-                    </Link>{" "}
+                    </PolarisLink>{" "}
                     interface examples like an{" "}
-                    <Link url="/app/additional" removeUnderline>
-                      additional page in the app nav
+                    <Link to="/app/compliance" style={{ color: '#2c6ecb', textDecoration: 'none' }}>
+                      compliance page
                     </Link>
                     , as well as an{" "}
-                    <Link
+                    <PolarisLink
                       url="https://shopify.dev/docs/api/admin-graphql"
                       target="_blank"
                       removeUnderline
                     >
                       Admin GraphQL
-                    </Link>{" "}
+                    </PolarisLink>{" "}
                     mutation demo, to provide a starting point for app
                     development.
                   </Text>
@@ -158,13 +166,13 @@ export default function Index() {
                   <Text as="p" variant="bodyMd">
                     Generate a product with GraphQL and get the JSON output for
                     that product. Learn more about the{" "}
-                    <Link
+                    <PolarisLink
                       url="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
                       target="_blank"
                       removeUnderline
                     >
                       productCreate
-                    </Link>{" "}
+                    </PolarisLink>{" "}
                     mutation in our API references.
                   </Text>
                 </BlockStack>
@@ -185,7 +193,6 @@ export default function Index() {
                 {fetcher.data?.product && (
                   <>
                     <Text as="h3" variant="headingMd">
-                      {" "}
                       productCreate mutation
                     </Text>
                     <Box
@@ -203,7 +210,6 @@ export default function Index() {
                       </pre>
                     </Box>
                     <Text as="h3" variant="headingMd">
-                      {" "}
                       productVariantsBulkUpdate mutation
                     </Text>
                     <Box
@@ -230,66 +236,32 @@ export default function Index() {
               <Card>
                 <BlockStack gap="200">
                   <Text as="h2" variant="headingMd">
-                    App template specs
+                    Price Compliance Features
                   </Text>
                   <BlockStack gap="200">
                     <InlineStack align="space-between">
                       <Text as="span" variant="bodyMd">
-                        Framework
+                        Price Tracking
                       </Text>
-                      <Link
-                        url="https://remix.run"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Remix
-                      </Link>
+                      <Text as="span" variant="bodyMd" fontWeight="bold">
+                        Automated
+                      </Text>
                     </InlineStack>
                     <InlineStack align="space-between">
                       <Text as="span" variant="bodyMd">
-                        Database
+                        Compliance Rules
                       </Text>
-                      <Link
-                        url="https://www.prisma.io/"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Prisma
-                      </Link>
+                      <Text as="span" variant="bodyMd" fontWeight="bold">
+                        Norway
+                      </Text>
                     </InlineStack>
                     <InlineStack align="space-between">
                       <Text as="span" variant="bodyMd">
-                        Interface
+                        Rule Checks
                       </Text>
-                      <span>
-                        <Link
-                          url="https://polaris.shopify.com"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          Polaris
-                        </Link>
-                        {", "}
-                        <Link
-                          url="https://shopify.dev/docs/apps/tools/app-bridge"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          App Bridge
-                        </Link>
-                      </span>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        API
+                      <Text as="span" variant="bodyMd" fontWeight="bold">
+                        Førpris, Sale Duration
                       </Text>
-                      <Link
-                        url="https://shopify.dev/docs/api/admin-graphql"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphQL API
-                      </Link>
                     </InlineStack>
                   </BlockStack>
                 </BlockStack>
@@ -301,26 +273,18 @@ export default function Index() {
                   </Text>
                   <List>
                     <List.Item>
-                      Build an{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/getting-started/build-app-example"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        {" "}
-                        example app
-                      </Link>{" "}
-                      to get started
+                      <Link to="/app/compliance" style={{ color: '#2c6ecb', textDecoration: 'none' }}>
+                        Go to Compliance Dashboard
+                      </Link>
                     </List.Item>
                     <List.Item>
-                      Explore Shopify’s API with{" "}
-                      <Link
+                      <PolarisLink
                         url="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
                         target="_blank"
                         removeUnderline
                       >
-                        GraphiQL
-                      </Link>
+                        Explore Shopify's API with GraphiQL
+                      </PolarisLink>
                     </List.Item>
                   </List>
                 </BlockStack>

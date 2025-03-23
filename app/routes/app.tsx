@@ -1,58 +1,103 @@
-// app/routes/app.tsx
-import { useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Outlet, useLoaderData } from "@remix-run/react";
-import { AppProvider, Frame } from "@shopify/polaris";
+import { Outlet, useLoaderData, useNavigate, useLocation } from "@remix-run/react";
+import { AppProvider as PolarisAppProvider, Frame, Navigation, TopBar, Icon } from "@shopify/polaris";
+import { HomeIcon, ChartVerticalIcon } from '@shopify/polaris-icons';
+import { useAppBridge } from "@shopify/app-bridge-react";
+import polarisTranslations from "@shopify/polaris/locales/en.json";
 
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
-  
-  return json({ apiKey: process.env.SHOPIFY_API_KEY || "", shop: session.shop });
+  return json({
+    apiKey: process.env.SHOPIFY_API_KEY || "",
+    shop: session.shop,
+  });
 };
 
 export default function App() {
   const { apiKey, shop } = useLoaderData<typeof loader>();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const app = useAppBridge();
+  const [mobileNavigationActive, setMobileNavigationActive] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const toggleMobileNavigationActive = () => {
+    setMobileNavigationActive((active) => !active);
+  };
+
+  const handleUserMenuToggle = useCallback(() => {
+    setUserMenuOpen((prevState) => !prevState);
+  }, []);
+
+  const navigationMarkup = useMemo(
+    () => (
+      <Navigation location={location.pathname}>
+        <Navigation.Section
+          items={[
+            {
+              label: 'Home',
+              icon: HomeIcon,
+              onClick: () => navigate('/app'),
+              selected: location.pathname === '/app',
+            },
+            {
+              label: 'Compliance',
+              icon: ChartVerticalIcon,
+              onClick: () => navigate('/app/compliance'),
+              selected: location.pathname.includes('/app/compliance'),
+            },
+          ]}
+        />
+      </Navigation>
+    ),
+    [location.pathname, navigate]
+  );
   
+  
+  const userMenuActions = [
+    {
+      items: [{ content: 'Back to Shopify', icon: HomeIcon }],
+    },
+    {
+      items: [{ content: 'Community forums' }],
+    },
+  ];
+
+
   return (
-    <AppProvider i18n={{}}>
-      <div style={{ padding: '20px' }}>
-        <div style={{ 
-          display: 'flex', 
-          gap: '20px', 
-          marginBottom: '20px', 
-          borderBottom: '1px solid #ddd',
-          paddingBottom: '10px'
-        }}>
-          <a 
-            href="/app" 
-            style={{ 
-              textDecoration: 'none',
-              fontWeight: 'bold',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              backgroundColor: window.location.pathname === "/app" ? '#f5f5f5' : 'transparent'
-            }}
-          >
-            Home
-          </a>
-          <a 
-            href="/app/compliance" 
-            style={{ 
-              textDecoration: 'none',
-              fontWeight: 'bold',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              backgroundColor: window.location.pathname.includes("/app/compliance") ? '#f5f5f5' : 'transparent'
-            }}
-          >
-            Compliance
-          </a>
-        </div>
+    <PolarisAppProvider i18n={polarisTranslations}>
+      <Frame
+        navigation={navigationMarkup}
+        showMobileNavigation={mobileNavigationActive}
+        onNavigationDismiss={toggleMobileNavigationActive}
+        topBar={
+          <TopBar
+            showNavigationToggle
+            onNavigationToggle={toggleMobileNavigationActive}
+            userMenu={
+              <TopBar.UserMenu
+                name="Price Compliance"
+                detail={shop}
+                initials="PC"
+                actions={userMenuActions}
+                open={userMenuOpen}
+                onToggle={handleUserMenuToggle}
+              />
+            }
+            secondaryMenu={
+              <div style={{ padding: "0 16px", fontSize: "14px", color: "#637381" }}>
+                Price Compliance Tracker
+              </div>
+            }
+          />
+        }
+      >
         <Outlet />
-      </div>
-    </AppProvider>
+      </Frame>
+    </PolarisAppProvider>
   );
 }

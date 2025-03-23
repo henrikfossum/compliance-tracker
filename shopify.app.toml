@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "9f0198e2ef79dda2cea9e4cba2e9cfa1"
-application_url = "https://investigations-pray-electoral-honors.trycloudflare.com"
+application_url = "https://mrna-pharmacies-cherry-relationship.trycloudflare.com"
 embedded = true
 name = "compliance-tracker"
 handle = "compliance-tracker"
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://investigations-pray-electoral-honors.trycloudflare.com/auth/callback",
-  "https://investigations-pray-electoral-honors.trycloudflare.com/auth/shopify/callback",
-  "https://investigations-pray-electoral-honors.trycloudflare.com/api/auth/callback"
+  "https://mrna-pharmacies-cherry-relationship.trycloudflare.com/auth/callback",
+  "https://mrna-pharmacies-cherry-relationship.trycloudflare.com/auth/shopify/callback",
+  "https://mrna-pharmacies-cherry-relationship.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
