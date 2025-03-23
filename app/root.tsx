@@ -20,8 +20,7 @@ export default function App() {
         />
         <Meta />
         <Links />
-        {/* Add this line to include your script */}
-        <script src="/script.js"></script>
+        {/* Remove the direct script tag - we'll use Remix's asset handling */}
       </head>
       <body>
         <Outlet />

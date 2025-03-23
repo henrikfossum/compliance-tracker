@@ -17,12 +17,37 @@ import {
   Banner,
   Box,
   Select,
-  ToggleButton,
-  EmptyState
+  Checkbox,
+  EmptyState,
+  Spinner
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 
 import { authenticate } from "../shopify.server";
+
+// Type definitions for action response
+type ScanResult = {
+  success: boolean;
+  productsTracked: number;
+  error?: string;
+};
+
+type UpdateResult = {
+  success: boolean;
+  settings?: {
+    enabled: boolean;
+    trackingFrequency: number;
+    countryRules: string;
+    lastScan: string;
+  };
+  error?: string;
+};
+
+type ActionData = {
+  scanResult?: ScanResult;
+  updateResult?: UpdateResult;
+  error?: string;
+};
 
 // Creating a minimal version for MVP
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -55,8 +80,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const responseJson = await response.json();
     const products = responseJson.data?.products?.edges || [];
     
-    // Simplified mock data for MVP - normally this would come from the database
-    const mockProducts = products.map(productEdge => {
+    // Simplified mock data for MVP
+    const mockProducts = products.map((productEdge: any) => {
       const product = productEdge.node;
       const productId = product.id.replace('gid://shopify/Product/', '');
       
@@ -67,22 +92,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       
       // Simple compliance check - just for MVP
       const isOnSale = compareAtPrice && compareAtPrice > price;
-      // Let's assume 20% of products are non-compliant for demonstration
-      const isCompliant = Math.random() > 0.2;
+      const isCompliant = Math.random() > 0.2; // Randomly mark some as non-compliant
       
       return {
         productId,
         variantId,
+        title: product.title,
         price,
         compareAtPrice,
         isOnSale,
         isCompliant,
-        title: product.title,
         lastChecked: new Date().toISOString(),
-        issues: isCompliant ? null : JSON.stringify([{
+        issues: isCompliant ? [] : [{
           rule: 'førpris',
           message: 'Reference price must be the lowest price from the last 30 days'
-        }])
+        }]
       };
     });
     
@@ -96,9 +120,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     
     // Calculate mock stats based on the mock products
     const totalProductCount = mockProducts.length;
-    const nonCompliantProducts = mockProducts.filter(p => !p.isCompliant);
+    const nonCompliantProducts = mockProducts.filter((p: any) => !p.isCompliant);
     const nonCompliantCount = nonCompliantProducts.length;
-    const onSaleCount = mockProducts.filter(p => p.isOnSale).length;
+    const onSaleCount = mockProducts.filter((p: any) => p.isOnSale).length;
     const complianceRate = totalProductCount > 0 
       ? (((totalProductCount - nonCompliantCount) / totalProductCount) * 100).toFixed(1)
       : "100.0";
@@ -114,15 +138,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return json({
       settings: mockSettings,
       stats: mockStats,
-      nonCompliantProducts
+      nonCompliantProducts,
+      allProducts: mockProducts
     });
   } catch (error) {
     console.error("Error loading compliance data:", error);
     return json({ 
       error: error instanceof Error ? error.message : "Unknown error",
-      settings: { enabled: true, trackingFrequency: 12, countryRules: 'NO' },
-      stats: { totalProductCount: 0, nonCompliantCount: 0, onSaleCount: 0, complianceRate: "100.0" },
-      nonCompliantProducts: []
+      settings: { enabled: true, trackingFrequency: 12, countryRules: 'NO', lastScan: null },
+      stats: { totalProductCount: 0, nonCompliantCount: 0, onSaleCount: 0, complianceRate: "100.0", lastScan: null },
+      nonCompliantProducts: [],
+      allProducts: []
     });
   }
 };
@@ -131,11 +157,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   
   const formData = await request.formData();
-  const action = formData.get("action");
+  const actionType = formData.get("action");
   
   // For MVP, just return success response for actions
-  if (action === "scan") {
-    return json({ 
+  if (actionType === "scan") {
+    return json<ActionData>({ 
       scanResult: { 
         success: true, 
         productsTracked: 10
@@ -143,20 +169,30 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
   }
   
-  if (action === "updateSettings") {
-    return json({ 
+  if (actionType === "updateSettings") {
+    const enabled = formData.get("enabled") === "true";
+    const trackingFrequency = parseInt(formData.get("trackingFrequency") as string, 10);
+    const countryRules = formData.get("countryRules") as string;
+    
+    return json<ActionData>({ 
       updateResult: { 
-        success: true
+        success: true,
+        settings: {
+          enabled,
+          trackingFrequency,
+          countryRules,
+          lastScan: new Date().toISOString()
+        }
       } 
     });
   }
   
-  return json({ error: "Invalid action" });
+  return json<ActionData>({ error: "Invalid action" });
 };
 
 export default function ComplianceDashboard() {
   const loaderData = useLoaderData<typeof loader>();
-  const fetcher = useFetcher<typeof action>();
+  const fetcher = useFetcher<ActionData>();
   const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState(0);
 
@@ -224,19 +260,35 @@ export default function ComplianceDashboard() {
     return new Date(date).toLocaleString();
   };
 
-  // Prepare data for table - ensuring proper types
+  // Prepare data for table - avoid using Button component directly
   const nonCompliantRows = loaderData.nonCompliantProducts?.map((product: any) => [
-    product.productId,
-    product.variantId,
-    product.compareAtPrice?.toString() ?? 'N/A',
+    <a 
+      href={`/app/compliance/${product.productId}/${product.variantId}`}
+      onClick={(e) => {
+        e.preventDefault();
+        handleProductClick(product.productId, product.variantId);
+      }}
+      style={{ color: '#2c6ecb', textDecoration: 'none' }}
+    >
+      {product.title}
+    </a>,
+    product.price.toFixed(2),
+    product.compareAtPrice ? product.compareAtPrice.toFixed(2) : 'N/A',
     product.isOnSale ? 'Yes' : 'No',
     formatDate(product.lastChecked),
-    product.issues ? JSON.parse(product.issues).map((issue: any) => issue.message).join(', ') : ''
+    product.issues ? product.issues.map((issue: any) => issue.message).join(', ') : ''
   ]) || [];
+
+  // Helper to safely check fetcher data properties
+  const hasScanResult = fetcher.data && 'scanResult' in fetcher.data;
+  const hasUpdateResult = fetcher.data && 'updateResult' in fetcher.data;
 
   return (
     <Page>
-      <TitleBar title="Price Compliance Tracker" />
+      {/* Replace TitleBar with plain heading for MVP */}
+      <div style={{ marginBottom: '20px' }}>
+        <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>Price Compliance Tracker</h1>
+      </div>
       
       <BlockStack gap="500">
         <Tabs
@@ -283,7 +335,7 @@ export default function ComplianceDashboard() {
                     </InlineStack>
                     
                     <BlockStack gap="300">
-                      <Text as="span" variant="bodyMd">Last scan: {formatDate(loaderData.settings?.lastScan)}</Text>
+                      <Text as="p" variant="bodyMd">Last scan: {formatDate(loaderData.stats?.lastScan)}</Text>
                       <Button
                         onClick={handleScanProducts}
                         loading={isScanning}
@@ -292,11 +344,11 @@ export default function ComplianceDashboard() {
                         Scan Products Now
                       </Button>
                       
-                      {fetcher.data?.scanResult && (
+                      {hasScanResult && fetcher.data?.scanResult && (
                         <Banner tone={fetcher.data.scanResult.success ? "success" : "critical"}>
                           {fetcher.data.scanResult.success
                             ? `Successfully scanned ${fetcher.data.scanResult.productsTracked} products`
-                            : `Error scanning products: ${fetcher.data.scanResult.error}`}
+                            : `Error scanning products: ${fetcher.data.scanResult.error || "Unknown error"}`}
                         </Banner>
                       )}
                     </BlockStack>
@@ -312,7 +364,6 @@ export default function ComplianceDashboard() {
                       </Text>
                       <Button
                         onClick={() => setSelectedTab(1)}
-                        variant="primary"
                       >
                         View Issues
                       </Button>
@@ -331,7 +382,12 @@ export default function ComplianceDashboard() {
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">Products with Compliance Issues</Text>
                   
-                  {nonCompliantRows.length === 0 ? (
+                  {isScanning ? (
+                    <BlockStack gap="400" align="center">
+                      <Spinner size="large" />
+                      <Text as="p" variant="bodyMd">Scanning products...</Text>
+                    </BlockStack>
+                  ) : nonCompliantRows.length === 0 ? (
                     <EmptyState
                       heading="No compliance issues"
                       image=""
@@ -345,16 +401,10 @@ export default function ComplianceDashboard() {
                       </Text>
                       
                       <DataTable
-                        columnContentTypes={['text', 'text', 'numeric', 'text', 'text', 'text']}
-                        headings={['Product ID', 'Variant ID', 'Reference Price', 'On Sale', 'Last Checked', 'Issues']}
+                        columnContentTypes={['text', 'numeric', 'numeric', 'text', 'text', 'text']}
+                        headings={['Product', 'Price', 'Reference Price', 'On Sale', 'Last Checked', 'Issues']}
                         rows={nonCompliantRows}
                       />
-                      
-                      {loaderData.nonCompliantProducts?.length === 10 && (
-                        <Text as="p" variant="bodyMd">
-                          Showing the 10 most recently checked non-compliant products. There may be more issues to address.
-                        </Text>
-                      )}
                     </BlockStack>
                   )}
                 </BlockStack>
@@ -372,7 +422,8 @@ export default function ComplianceDashboard() {
                   
                   <BlockStack gap="400">
                     <Box>
-                      <ToggleButton
+                      {/* Replace Switch with Checkbox */}
+                      <Checkbox
                         label="Enable compliance tracking"
                         checked={settings.enabled}
                         onChange={() => setSettings({...settings, enabled: !settings.enabled})}
@@ -387,7 +438,7 @@ export default function ComplianceDashboard() {
                         {label: 'Daily', value: '24'},
                         {label: 'Weekly', value: '168'}
                       ]}
-                      value={settings.trackingFrequency}
+                      value={settings.trackingFrequency.toString()}
                       onChange={(value) => setSettings({...settings, trackingFrequency: value})}
                       disabled={!settings.enabled}
                     />
@@ -407,18 +458,16 @@ export default function ComplianceDashboard() {
                     
                     <Button
                       onClick={handleSaveSettings}
-                      primary
-                      loading={isSavingSettings}
                       disabled={isSavingSettings}
                     >
-                      Save Settings
+                      {isSavingSettings ? "Saving..." : "Save Settings"}
                     </Button>
                     
-                    {fetcher.data?.updateResult && (
+                    {hasUpdateResult && fetcher.data?.updateResult && (
                       <Banner tone={fetcher.data.updateResult.success ? "success" : "critical"}>
                         {fetcher.data.updateResult.success
                           ? "Settings updated successfully"
-                          : `Error updating settings: ${fetcher.data.updateResult.error}`}
+                          : `Error updating settings: ${fetcher.data.updateResult.error || "Unknown error"}`}
                       </Banner>
                     )}
                   </BlockStack>
