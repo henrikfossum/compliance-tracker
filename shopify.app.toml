@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "9f0198e2ef79dda2cea9e4cba2e9cfa1"
-application_url = "https://southwest-quick-grad-venture.trycloudflare.com"
+application_url = "https://protocols-forgot-mp-nv.trycloudflare.com"
 embedded = true
 name = "compliance-tracker"
 handle = "compliance-tracker"
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://southwest-quick-grad-venture.trycloudflare.com/auth/callback",
-  "https://southwest-quick-grad-venture.trycloudflare.com/auth/shopify/callback",
-  "https://southwest-quick-grad-venture.trycloudflare.com/api/auth/callback"
+  "https://protocols-forgot-mp-nv.trycloudflare.com/auth/callback",
+  "https://protocols-forgot-mp-nv.trycloudflare.com/auth/shopify/callback",
+  "https://protocols-forgot-mp-nv.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

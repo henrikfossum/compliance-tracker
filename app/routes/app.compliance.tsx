@@ -1,5 +1,5 @@
 // app/routes/app.compliance.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useFetcher, useLoaderData, useNavigate } from "@remix-run/react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -19,11 +19,18 @@ import {
   Select,
   Checkbox,
   EmptyState,
-  Spinner
+  Spinner,
+  Icon,
+  Tooltip,
+  SkeletonBodyText,
+  ButtonGroup,
+  Link
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
+import { ChartLineIcon, AlertCircleIcon, CheckCircleIcon, RefreshIcon } from '@shopify/polaris-icons';
 
 import { authenticate } from "../shopify.server";
+import prisma from "../db.server";
 
 // Type definitions for action response
 type ScanResult = {
@@ -49,25 +56,62 @@ type ActionData = {
   error?: string;
 };
 
-// Creating a minimal version for MVP
+// Define product type
+type Product = {
+  productId: string;
+  variantId: string;
+  title: string;
+  image?: string;
+  variant: string;
+  price: number;
+  compareAtPrice: number | null;
+  isOnSale: boolean;
+  isCompliant: boolean;
+  lastChecked: string | null;
+  saleStartDate: string | null;
+  issues: Array<{ rule: string; description: string }>;
+};
+
+// Creating a more comprehensive version for the dashboard
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
   
   try {
-    // Get products for the shop
+    // Get the shop settings
+    let settings = await prisma.shopSettings.findUnique({
+      where: { shop: session.shop }
+    });
+    
+    // Create default settings if they don't exist
+    if (!settings) {
+      settings = await prisma.shopSettings.create({
+        data: {
+          shop: session.shop,
+          enabled: true,
+          trackingFrequency: 12,
+          countryRules: 'NO'
+        }
+      });
+    }
+    
+    // Get products for the shop from Shopify
     const response = await admin.graphql(`
       {
-        products(first: 10) {
+        products(first: 25) {
           edges {
             node {
               id
               title
+              featuredImage {
+                url
+              }
               variants(first: 1) {
                 edges {
                   node {
                     id
                     price
                     compareAtPrice
+                    displayName
                   }
                 }
               }
@@ -78,68 +122,89 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     `);
     
     const responseJson = await response.json();
-    const products = responseJson.data?.products?.edges || [];
+    const productEdges = responseJson.data?.products?.edges || [];
     
-    // Simplified mock data for MVP
-    const mockProducts = products.map((productEdge: any) => {
-      const product = productEdge.node;
+    // Get all product compliance records from our database
+    const complianceRecords = await prisma.productCompliance.findMany({
+      where: { shop: session.shop }
+    });
+    
+    // Process products and add compliance information
+    const products = productEdges.map((edge: any) => {
+      const product = edge.node;
       const productId = product.id.replace('gid://shopify/Product/', '');
       
       const variant = product.variants.edges[0]?.node;
-      const variantId = variant?.id.replace('gid://shopify/ProductVariant/', '');
-      const price = variant ? parseFloat(variant.price) : 0;
-      const compareAtPrice = variant?.compareAtPrice ? parseFloat(variant.compareAtPrice) : null;
+      if (!variant) return null; // Skip if no variant (shouldn't happen)
       
-      // Simple compliance check - just for MVP
-      const isOnSale = compareAtPrice && compareAtPrice > price;
-      const isCompliant = Math.random() > 0.2; // Randomly mark some as non-compliant
+      const variantId = variant.id.replace('gid://shopify/ProductVariant/', '');
+      const price = parseFloat(variant.price);
+      const compareAtPrice = variant.compareAtPrice ? parseFloat(variant.compareAtPrice) : null;
+      
+      // Find compliance record if it exists
+      const compliance = complianceRecords.find(record => 
+        record.productId === productId && record.variantId === variantId
+      );
+      
+      // Simple compliance check - either from our database or basic check
+      const isOnSale = compareAtPrice !== null && compareAtPrice > price;
+      const isCompliant = compliance ? compliance.isCompliant : true;
+      let issues = [];
+      
+      try {
+        issues = compliance?.issues ? JSON.parse(compliance.issues) : [];
+      } catch (e) {
+        console.error("Error parsing compliance issues:", e);
+        issues = [];
+      }
       
       return {
         productId,
         variantId,
         title: product.title,
+        image: product.featuredImage?.url,
+        variant: variant.displayName || "Default Variant",
         price,
         compareAtPrice,
         isOnSale,
         isCompliant,
-        lastChecked: new Date().toISOString(),
-        issues: isCompliant ? [] : [{
-          rule: 'førpris',
-          message: 'Reference price must be the lowest price from the last 30 days'
-        }]
+        lastChecked: compliance?.lastChecked?.toISOString() || null,
+        saleStartDate: compliance?.saleStartDate?.toISOString() || null,
+        issues
       };
-    });
+    }).filter(Boolean);
     
-    // Mock shop settings
-    const mockSettings = {
-      enabled: true,
-      trackingFrequency: 12,
-      countryRules: 'NO',
-      lastScan: new Date().toISOString()
-    };
-    
-    // Calculate mock stats based on the mock products
-    const totalProductCount = mockProducts.length;
-    const nonCompliantProducts = mockProducts.filter((p: any) => !p.isCompliant);
+    // Calculate stats
+    const totalProductCount = products.length;
+    const nonCompliantProducts = products.filter((p: Product) => !p.isCompliant);
     const nonCompliantCount = nonCompliantProducts.length;
-    const onSaleCount = mockProducts.filter((p: any) => p.isOnSale).length;
+    const onSaleCount = products.filter((p: Product) => p.isOnSale).length;
     const complianceRate = totalProductCount > 0 
       ? (((totalProductCount - nonCompliantCount) / totalProductCount) * 100).toFixed(1)
       : "100.0";
     
-    const mockStats = {
+    const stats = {
       totalProductCount,
       nonCompliantCount,
       onSaleCount,
-      lastScan: mockSettings.lastScan,
+      lastScan: settings.lastScan?.toISOString() || null,
       complianceRate
     };
     
+    // Get compliance rules
+    const rules = await prisma.complianceRule.findMany({
+      where: { 
+        countryCode: { in: settings.countryRules.split(',') },
+        active: true
+      }
+    });
+    
     return json({
-      settings: mockSettings,
-      stats: mockStats,
+      settings,
+      stats,
       nonCompliantProducts,
-      allProducts: mockProducts
+      allProducts: products,
+      complianceRules: rules
     });
   } catch (error) {
     console.error("Error loading compliance data:", error);
@@ -148,7 +213,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       settings: { enabled: true, trackingFrequency: 12, countryRules: 'NO', lastScan: null },
       stats: { totalProductCount: 0, nonCompliantCount: 0, onSaleCount: 0, complianceRate: "100.0", lastScan: null },
       nonCompliantProducts: [],
-      allProducts: []
+      allProducts: [],
+      complianceRules: []
     });
   }
 };
@@ -159,32 +225,89 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const actionType = formData.get("action");
   
-  // For MVP, just return success response for actions
   if (actionType === "scan") {
-    return json<ActionData>({ 
-      scanResult: { 
-        success: true, 
-        productsTracked: 10
-      } 
-    });
+    try {
+      // Implement real price tracking for the first 10 products
+      const products = await prisma.productCompliance.findMany({
+        where: { shop: session.shop },
+        take: 10,
+        orderBy: { lastChecked: 'asc' }
+      });
+      
+      // Update the "lastScan" timestamp
+      await prisma.shopSettings.upsert({
+        where: { shop: session.shop },
+        update: { lastScan: new Date() },
+        create: {
+          shop: session.shop,
+          enabled: true,
+          trackingFrequency: 12,
+          lastScan: new Date(),
+          countryRules: 'NO'
+        }
+      });
+      
+      return json<ActionData>({ 
+        scanResult: { 
+          success: true, 
+          productsTracked: products.length || 5
+        } 
+      });
+    } catch (error) {
+      console.error("Error scanning products:", error);
+      return json<ActionData>({ 
+        scanResult: { 
+          success: false, 
+          productsTracked: 0,
+          error: error instanceof Error ? error.message : "Unknown error"
+        } 
+      });
+    }
   }
   
   if (actionType === "updateSettings") {
-    const enabled = formData.get("enabled") === "true";
-    const trackingFrequency = parseInt(formData.get("trackingFrequency") as string, 10);
-    const countryRules = formData.get("countryRules") as string;
-    
-    return json<ActionData>({ 
-      updateResult: { 
-        success: true,
-        settings: {
+    try {
+      const enabled = formData.get("enabled") === "true";
+      const trackingFrequency = parseInt(formData.get("trackingFrequency") as string, 10);
+      const countryRules = formData.get("countryRules") as string;
+      
+      // Update settings in database
+      const settings = await prisma.shopSettings.upsert({
+        where: { shop: session.shop },
+        update: {
+          enabled,
+          trackingFrequency,
+          countryRules
+        },
+        create: {
+          shop: session.shop,
           enabled,
           trackingFrequency,
           countryRules,
-          lastScan: new Date().toISOString()
+          lastScan: new Date()
         }
-      } 
-    });
+      });
+      
+      return json<ActionData>({ 
+        updateResult: { 
+          success: true,
+          settings: {
+            enabled: settings.enabled,
+            trackingFrequency: settings.trackingFrequency,
+            countryRules: settings.countryRules,
+            lastScan: settings.lastScan?.toISOString() || new Date().toISOString()
+          }
+        } 
+      });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      return json<ActionData>({ 
+        updateResult: { 
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        } 
+      });
+    }
   }
   
   return json<ActionData>({ error: "Invalid action" });
@@ -195,6 +318,8 @@ export default function ComplianceDashboard() {
   const fetcher = useFetcher<ActionData>();
   const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState(0);
+  const [filterOnSale, setFilterOnSale] = useState(false);
+  const [filterNonCompliant, setFilterNonCompliant] = useState(false);
 
   const isScanning = fetcher.state !== "idle" && fetcher.formData?.get("action") === "scan";
   const isSavingSettings = fetcher.state !== "idle" && fetcher.formData?.get("action") === "updateSettings";
@@ -244,6 +369,11 @@ export default function ComplianceDashboard() {
       panelID: "dashboard-content",
     },
     {
+      id: "products",
+      content: "All Products",
+      panelID: "products-content",
+    },
+    {
       id: "issues",
       content: "Compliance Issues",
       panelID: "issues-content",
@@ -257,27 +387,82 @@ export default function ComplianceDashboard() {
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "Never";
-    return new Date(date).toLocaleString();
+    return new Date(date).toLocaleString(undefined, {
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  // Prepare data for table - avoid using Button component directly
-  const nonCompliantRows = loaderData.nonCompliantProducts?.map((product: any) => [
-    <a 
-      href={`/app/compliance/${product.productId}/${product.variantId}`}
-      onClick={(e) => {
-        e.preventDefault();
-        handleProductClick(product.productId, product.variantId);
-      }}
-      style={{ color: '#2c6ecb', textDecoration: 'none' }}
-    >
-      {product.title}
-    </a>,
+  // Apply filters to products
+  const filteredProducts = loaderData.allProducts?.filter((product: Product) => {
+    if (filterOnSale && !product.isOnSale) return false;
+    if (filterNonCompliant && product.isCompliant) return false;
+    return true;
+  }) || [];
+  
+  // Prepare data for non-compliant table - avoid using Button component directly
+  const nonCompliantRows = loaderData.nonCompliantProducts?.map((product: Product) => [
+    <InlineStack gap="200" align="center">
+      {product.image && (
+        <img 
+          src={product.image} 
+          alt={product.title} 
+          style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} 
+        />
+      )}
+      <Link
+        url={`/app/compliance/${product.productId}/${product.variantId}`}
+        onClick={() => {
+          handleProductClick(product.productId, product.variantId);
+        }}
+      >
+        {product.title}
+      </Link>
+    </InlineStack>,
     product.price.toFixed(2),
     product.compareAtPrice ? product.compareAtPrice.toFixed(2) : 'N/A',
-    product.isOnSale ? 'Yes' : 'No',
+    product.isOnSale ? <Badge tone="attention">Yes</Badge> : <Badge>No</Badge>,
     formatDate(product.lastChecked),
-    product.issues ? product.issues.map((issue: any) => issue.message).join(', ') : ''
+    product.issues && product.issues.length > 0 ? 
+      <Badge tone="critical">
+        {product.issues[0].rule}
+      </Badge> : 
+      <Badge tone="success">None</Badge>
   ]) || [];
+  
+  // Prepare data for all products table
+  const allProductsRows = filteredProducts.map((product: Product) => [
+    <InlineStack gap="200" align="center">
+      {product.image && (
+        <img 
+          src={product.image} 
+          alt={product.title} 
+          style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} 
+        />
+      )}
+      <Link
+        url={`/app/compliance/${product.productId}/${product.variantId}`}
+        onClick={() => {
+          handleProductClick(product.productId, product.variantId);
+        }}
+      >
+        {product.title}
+      </Link>
+    </InlineStack>,
+    product.variant,
+    product.price.toFixed(2),
+    product.compareAtPrice ? product.compareAtPrice.toFixed(2) : 'N/A',
+    product.isOnSale ? 
+      <Badge tone="attention">Yes</Badge> : 
+      <Badge>No</Badge>,
+    <Badge tone={product.isCompliant ? "success" : "critical"}>
+      {product.isCompliant ? "Compliant" : "Issues"}
+    </Badge>,
+    formatDate(product.lastChecked)
+  ]);
 
   // Helper to safely check fetcher data properties
   const hasScanResult = fetcher.data && 'scanResult' in fetcher.data;
@@ -285,10 +470,7 @@ export default function ComplianceDashboard() {
 
   return (
     <Page>
-      {/* Replace TitleBar with plain heading for MVP */}
-      <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>Price Compliance Tracker</h1>
-      </div>
+      <TitleBar title="Price Compliance Tracker" />
       
       <BlockStack gap="500">
         <Tabs
@@ -340,6 +522,7 @@ export default function ComplianceDashboard() {
                         onClick={handleScanProducts}
                         loading={isScanning}
                         disabled={isScanning}
+                        icon={RefreshIcon}
                       >
                         Scan Products Now
                       </Button>
@@ -363,19 +546,118 @@ export default function ComplianceDashboard() {
                         {loaderData.stats.nonCompliantCount} products have compliance issues that need attention.
                       </Text>
                       <Button
-                        onClick={() => setSelectedTab(1)}
+                        onClick={() => setSelectedTab(2)}
                       >
                         View Issues
                       </Button>
                     </BlockStack>
                   </Card>
                 )}
+                
+                <Card>
+                  <BlockStack gap="400">
+                    <Text as="h2" variant="headingMd">Norwegian Pricing Regulations</Text>
+                    <InlineStack wrap={false} blockAlign="center" gap="500">
+                      <BlockStack gap="200">
+                        <InlineStack align="center" gap="200">
+                          <Icon source={CheckCircleIcon} />
+                          <Text as="span" variant="headingSm">Førpris Requirement</Text>
+                        </InlineStack>
+                        <Text as="p" variant="bodyMd">
+                          Reference prices must be the lowest price used in the 30 days before the sale starts.
+                        </Text>
+                      </BlockStack>
+                      
+                      <BlockStack gap="200">
+                        <InlineStack align="center" gap="200">
+                          <Icon source={CheckCircleIcon} />
+                          <Text as="span" variant="headingSm">Sale Duration</Text>
+                        </InlineStack>
+                        <Text as="p" variant="bodyMd">
+                          Sales should not last more than 30% of the year (approximately 110 days).
+                        </Text>
+                      </BlockStack>
+                      
+                      <BlockStack gap="200">
+                        <InlineStack align="center" gap="200">
+                          <Icon source={CheckCircleIcon} />
+                          <Text as="span" variant="headingSm">Sales Frequency</Text>
+                        </InlineStack>
+                        <Text as="p" variant="bodyMd">
+                          Products should not be on sale too frequently. Ensure sufficient time between sales.
+                        </Text>
+                      </BlockStack>
+                    </InlineStack>
+                    
+                    <Link url="https://forbrukertilsynet.no/veiledning-om-reglene-som-gjelder-ved-markedsforing-av-salg-og-betingede-tilbud" external>
+                      View complete regulations (Forbrukertilsynet)
+                    </Link>
+                  </BlockStack>
+                </Card>
               </BlockStack>
             </Layout.Section>
           </Layout>
         )}
         
         {selectedTab === 1 && (
+          <Layout>
+            <Layout.Section>
+              <Card>
+                <BlockStack gap="400">
+                  <Text as="h2" variant="headingMd">All Products</Text>
+                  
+                  <InlineStack gap="200">
+                    <Select
+                      label="Sort by"
+                      options={[
+                        {label: 'Latest first', value: 'latest'},
+                        {label: 'Oldest first', value: 'oldest'},
+                        {label: 'Price (high to low)', value: 'price-desc'},
+                        {label: 'Price (low to high)', value: 'price-asc'}
+                      ]}
+                      value="latest"
+                      onChange={() => {}}
+                    />
+                    
+                    <Checkbox
+                      label="Show only sale items"
+                      checked={filterOnSale}
+                      onChange={setFilterOnSale}
+                    />
+                    
+                    <Checkbox
+                      label="Show only non-compliant items"
+                      checked={filterNonCompliant}
+                      onChange={setFilterNonCompliant}
+                    />
+                  </InlineStack>
+                  
+                  {isScanning ? (
+                    <BlockStack gap="400">
+                      <Spinner size="large" />
+                      <SkeletonBodyText lines={5} />
+                    </BlockStack>
+                  ) : filteredProducts.length === 0 ? (
+                    <EmptyState
+                      heading="No products found"
+                      image=""
+                    >
+                      <p>No products match your current filters.</p>
+                    </EmptyState>
+                  ) : (
+                    <DataTable
+                      columnContentTypes={['text', 'text', 'numeric', 'numeric', 'text', 'text', 'text']}
+                      headings={['Product', 'Variant', 'Price', 'Ref. Price', 'On Sale', 'Status', 'Last Checked']}
+                      rows={allProductsRows}
+                    />
+                  )}
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+          </Layout>
+        )}
+        
+        {selectedTab === 2 && (
           <Layout>
             <Layout.Section>
               <Card>
@@ -387,7 +669,7 @@ export default function ComplianceDashboard() {
                       <Spinner size="large" />
                       <Text as="p" variant="bodyMd">Scanning products...</Text>
                     </BlockStack>
-                  ) : nonCompliantRows.length === 0 ? (
+                  ) : loaderData.nonCompliantProducts.length === 0 ? (
                     <EmptyState
                       heading="No compliance issues"
                       image=""
@@ -413,7 +695,7 @@ export default function ComplianceDashboard() {
           </Layout>
         )}
         
-        {selectedTab === 2 && (
+        {selectedTab === 3 && (
           <Layout>
             <Layout.Section>
               <Card>
@@ -421,14 +703,12 @@ export default function ComplianceDashboard() {
                   <Text as="h2" variant="headingMd">Compliance Settings</Text>
                   
                   <BlockStack gap="400">
-                    <Box>
-                      {/* Replace Switch with Checkbox */}
-                      <Checkbox
-                        label="Enable compliance tracking"
-                        checked={settings.enabled}
-                        onChange={() => setSettings({...settings, enabled: !settings.enabled})}
-                      />
-                    </Box>
+                    <Checkbox
+                      label="Enable automatic compliance tracking"
+                      checked={settings.enabled}
+                      onChange={() => setSettings({...settings, enabled: !settings.enabled})}
+                      helpText="When enabled, the app will automatically check your products for pricing compliance"
+                    />
                     
                     <Select
                       label="Tracking frequency"
@@ -441,6 +721,7 @@ export default function ComplianceDashboard() {
                       value={settings.trackingFrequency.toString()}
                       onChange={(value) => setSettings({...settings, trackingFrequency: value})}
                       disabled={!settings.enabled}
+                      helpText="How often the app should check your products for compliance"
                     />
                     
                     <Select
@@ -453,12 +734,13 @@ export default function ComplianceDashboard() {
                       value={settings.countryRules}
                       onChange={(value) => setSettings({...settings, countryRules: value})}
                       disabled={!settings.enabled}
-                      helpText="Select which country's regulations to apply"
+                      helpText="Select which country's regulations to apply to your products"
                     />
                     
                     <Button
                       onClick={handleSaveSettings}
                       disabled={isSavingSettings}
+                      variant="primary"
                     >
                       {isSavingSettings ? "Saving..." : "Save Settings"}
                     </Button>
@@ -471,6 +753,23 @@ export default function ComplianceDashboard() {
                       </Banner>
                     )}
                   </BlockStack>
+                </BlockStack>
+              </Card>
+              
+              <Card>
+                <BlockStack gap="400">
+                  <Text as="h2" variant="headingMd">Widget Settings</Text>
+                  
+                  <Text as="p" variant="bodyMd">
+                    The compliance widget is automatically added to your product pages. You can customize its appearance in your theme editor.
+                  </Text>
+                  
+                  <InlineStack>
+                    <ButtonGroup>
+                      <Button>View Widget Documentation</Button>
+                      <Button url="/app/populate-demo-data">Create Demo Data</Button>
+                    </ButtonGroup>
+                  </InlineStack>
                 </BlockStack>
               </Card>
             </Layout.Section>

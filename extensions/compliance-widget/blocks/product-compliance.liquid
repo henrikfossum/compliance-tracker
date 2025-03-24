@@ -1,13 +1,25 @@
 {% comment %}
-  @name Price Compliance Display
-  @description Displays price information in compliance with Norwegian regulations
+  @name Price Compliance Widget
+  @description Displays price information in compliance with Norwegian pricing regulations
   @icon price-lookup
   @category products
 {% endcomment %}
 
 <div class="norwegian-compliance-container" 
      data-product-id="{{ product.id }}" 
-     data-variant-id="{{ product.selected_or_first_available_variant.id }}">
+     data-variant-id="{{ product.selected_or_first_available_variant.id }}"
+     data-display-style="{{ block.settings.display_style }}"
+     style="
+        --background-color: {{ block.settings.background_color }};
+        --text-color: {{ block.settings.text_color }};
+        --sale-price-color: {{ block.settings.sale_price_color }};
+        --reference-price-color: {{ block.settings.reference_price_color }};
+        --border-color: {{ block.settings.border_color }};
+        --border-width: {{ block.settings.border_width }}px;
+        --border-style: {{ block.settings.border_style }};
+        --border-radius: {{ block.settings.border_radius }}px;
+        --font-size: {{ block.settings.font_size }}px;
+     ">
   
   <div class="norwegian-compliance-pricing">
     {% if product.compare_at_price > product.price %}
@@ -15,19 +27,21 @@
       <div class="current-price-container">
         <span class="current-price">{{ product.price | money }}</span>
         {% assign discount_percentage = product.compare_at_price | minus: product.price | times: 100.0 | divided_by: product.compare_at_price | round %}
-        <span class="discount-badge">Spar {{ discount_percentage }}%</span>
+        {% assign discount_text = block.settings.discount_label | replace: "{percent}", discount_percentage %}
+        <span class="discount-badge">{{ discount_text }}</span>
       </div>
       
       <!-- Reference Price - Most important part for compliance -->
       <div class="reference-price-container">
         <span class="reference-price">{{ product.compare_at_price | money }}</span>
-        <span class="reference-price-label">Laveste pris siste 30 dager</span>
+        <span class="reference-price-label">{{ block.settings.reference_price_label }}</span>
       </div>
       
       <!-- Sale Period Information - For compliance with sale duration rules -->
       {% if product.metafields.compliance.sale_start_date %}
         <div class="sale-dates">
-          <span class="sale-period">Salgsperiode: {{ product.metafields.compliance.sale_start_date | date: "%d.%m.%Y" }} 
+          <span class="sale-period">{{ block.settings.sale_period_label }}: 
+            {{ product.metafields.compliance.sale_start_date | date: "%d.%m.%Y" }} 
             {% if product.metafields.compliance.sale_end_date %} 
               - {{ product.metafields.compliance.sale_end_date | date: "%d.%m.%Y" }}
             {% endif %}
@@ -35,10 +49,10 @@
         </div>
       {% endif %}
       
-      <!-- Regular price if available -->
-      {% if product.metafields.compliance.original_price %}
+      <!-- Regular price if available and if display style is detailed -->
+      {% if block.settings.display_style == 'detailed' and product.metafields.compliance.original_price %}
         <div class="regular-price-container">
-          <span class="regular-price-label">Ordinær pris:</span>
+          <span class="regular-price-label">{{ block.settings.regular_price_label }}:</span>
           <span class="regular-price">{{ product.metafields.compliance.original_price | money }}</span>
         </div>
       {% endif %}
@@ -48,12 +62,12 @@
       <div class="regular-mode-message">
         <div class="price-info">
           <span class="current-price regular">{{ product.price | money }}</span>
-          <span class="regular-price-label">Ordinær pris</span>
+          <span class="regular-price-label">{{ block.settings.regular_price_label }}</span>
         </div>
         
-        {% if product.metafields.compliance.price_tracking_since %}
+        {% if block.settings.display_style == 'detailed' and product.metafields.compliance.price_tracking_since %}
           <div class="tracking-info">
-            <span class="tracking-since">Pris sporet siden: {{ product.metafields.compliance.price_tracking_since | date: "%d.%m.%Y" }}</span>
+            <span class="tracking-since">{{ block.settings.tracking_since_label }}: {{ product.metafields.compliance.price_tracking_since | date: "%d.%m.%Y" }}</span>
           </div>
         {% endif %}
       </div>
@@ -63,10 +77,10 @@
   {% if block.settings.show_price_history and product.metafields.compliance.price_history %}
     <div class="price-history-container">
       <details class="price-history-details">
-        <summary>Vis prishistorikk</summary>
+        <summary>{{ block.settings.price_history_label }}</summary>
         <div class="price-history-graph" data-history="{{ product.metafields.compliance.price_history | json }}">
           <!-- Price history graph will be rendered by JavaScript -->
-          <div class="price-history-placeholder">Laster prishistorikk...</div>
+          <div class="price-history-placeholder">{{ block.settings.loading_label }}</div>
         </div>
       </details>
     </div>
@@ -77,9 +91,9 @@
       <span class="compliance-icon"></span>
       <span class="compliance-text">
         {% if product.metafields.compliance.is_compliant != false %}
-          Prismarkedsføringen er i samsvar med norske regler
+          {{ block.settings.compliant_message }}
         {% else %}
-          Kontakt butikken for informasjon om prishistorikk
+          {{ block.settings.non_compliant_message }}
         {% endif %}
       </span>
     </div>
@@ -88,9 +102,33 @@
 
 {% schema %}
 {
-  "name": "Price Compliance",
+  "name": "Price Compliance Widget",
   "target": "section",
   "settings": [
+    {
+      "type": "header",
+      "content": "Display Settings"
+    },
+    {
+      "type": "select",
+      "id": "display_style",
+      "label": "Display style",
+      "options": [
+        {
+          "value": "minimal",
+          "label": "Minimal (basic information only)"
+        },
+        {
+          "value": "compact",
+          "label": "Compact"
+        },
+        {
+          "value": "detailed",
+          "label": "Detailed"
+        }
+      ],
+      "default": "detailed"
+    },
     {
       "type": "checkbox",
       "id": "show_price_history",
@@ -104,20 +142,20 @@
       "default": true
     },
     {
-      "type": "select",
-      "id": "display_style",
-      "label": "Display style",
-      "options": [
-        {
-          "value": "compact",
-          "label": "Compact"
-        },
-        {
-          "value": "detailed",
-          "label": "Detailed"
-        }
-      ],
-      "default": "detailed"
+      "type": "header",
+      "content": "Visual Customization"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#f9f9f9"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#333333"
     },
     {
       "type": "color",
@@ -130,6 +168,124 @@
       "id": "reference_price_color", 
       "label": "Reference price color",
       "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border color",
+      "default": "#e5e5e5"
+    },
+    {
+      "type": "range",
+      "id": "border_width",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "unit": "px",
+      "label": "Border width",
+      "default": 1
+    },
+    {
+      "type": "select",
+      "id": "border_style",
+      "label": "Border style",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "solid",
+          "label": "Solid"
+        },
+        {
+          "value": "dashed",
+          "label": "Dashed"
+        },
+        {
+          "value": "dotted",
+          "label": "Dotted"
+        }
+      ],
+      "default": "solid"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Border radius",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Base font size",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "Text Customization"
+    },
+    {
+      "type": "text",
+      "id": "discount_label",
+      "label": "Discount label",
+      "default": "Save {percent}%"
+    },
+    {
+      "type": "text",
+      "id": "reference_price_label",
+      "label": "Reference price label",
+      "default": "Lowest price in the last 30 days"
+    },
+    {
+      "type": "text",
+      "id": "sale_period_label",
+      "label": "Sale period label",
+      "default": "Sale period"
+    },
+    {
+      "type": "text",
+      "id": "regular_price_label",
+      "label": "Regular price label",
+      "default": "Regular price"
+    },
+    {
+      "type": "text",
+      "id": "tracking_since_label",
+      "label": "Price tracking since label",
+      "default": "Price tracked since"
+    },
+    {
+      "type": "text",
+      "id": "price_history_label",
+      "label": "Price history label",
+      "default": "Show price history"
+    },
+    {
+      "type": "text",
+      "id": "loading_label",
+      "label": "Loading label",
+      "default": "Loading price history..."
+    },
+    {
+      "type": "text",
+      "id": "compliant_message",
+      "label": "Compliant status message",
+      "default": "This product's pricing complies with Norwegian regulations"
+    },
+    {
+      "type": "text",
+      "id": "non_compliant_message",
+      "label": "Non-compliant status message",
+      "default": "Contact the store for more information about price history"
     }
   ]
 }
@@ -138,8 +294,14 @@
 <style>
 .norwegian-compliance-container {
   margin: 1rem 0;
-  font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.4;
+  padding: 1rem;
+  background-color: var(--background-color, #f9f9f9);
+  color: var(--text-color, #333333);
+  border: var(--border-width, 1px) var(--border-style, solid) var(--border-color, #e5e5e5);
+  border-radius: var(--border-radius, 4px);
+  font-size: var(--font-size, 14px);
 }
 
 /* Price containers */
@@ -158,13 +320,13 @@
 }
 
 .current-price {
-  font-size: 1.5rem;
+  font-size: calc(var(--font-size) * 1.5);
   font-weight: 700;
   color: var(--sale-price-color, #CC0000);
 }
 
 .current-price.regular {
-  color: #333;
+  color: var(--text-color, #333);
 }
 
 .discount-badge {
@@ -175,7 +337,7 @@
   color: white;
   padding: 0.25rem 0.5rem;
   border-radius: 3px;
-  font-size: 0.8rem;
+  font-size: calc(var(--font-size) * 0.85);
   font-weight: 600;
 }
 
@@ -193,8 +355,8 @@
 }
 
 .tracking-info {
-  font-size: 0.85rem;
-  color: #666;
+  font-size: calc(var(--font-size) * 0.85);
+  color: var(--reference-price-color, #666);
 }
 
 .tracking-since {
@@ -208,7 +370,7 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.5rem;
-  background-color: #f5f5f5;
+  background-color: rgba(0, 0, 0, 0.05);
   border-radius: 4px;
   border-left: 3px solid var(--reference-price-color, #666);
 }
@@ -216,44 +378,44 @@
 .reference-price {
   text-decoration: line-through;
   color: var(--reference-price-color, #666);
-  font-size: 1rem;
+  font-size: calc(var(--font-size) * 1.1);
   font-weight: 500;
 }
 
 .reference-price-label {
-  font-size: 0.85rem;
+  font-size: calc(var(--font-size) * 0.85);
   font-weight: 600;
-  color: #444;
+  color: var(--reference-price-color, #666);
 }
 
 /* Regular price if shown */
 .regular-price-container {
-  font-size: 0.85rem;
-  color: #666;
+  font-size: calc(var(--font-size) * 0.85);
+  color: var(--reference-price-color, #666);
   margin-top: 0.25rem;
 }
 
 /* Sale dates */
 .sale-dates {
-  font-size: 0.85rem;
-  color: #666;
+  font-size: calc(var(--font-size) * 0.85);
+  color: var(--reference-price-color, #666);
   margin-top: 0.5rem;
   padding: 0.5rem;
-  background-color: #f9f9f9;
+  background-color: rgba(0, 0, 0, 0.03);
   border-radius: 4px;
 }
 
 /* Price history section */
 .price-history-container {
   margin-top: 1rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
   padding-top: 1rem;
 }
 
 .price-history-details summary {
   cursor: pointer;
   color: #2c6ecb;
-  font-size: 0.9rem;
+  font-size: calc(var(--font-size) * 0.95);
 }
 
 .price-history-details summary:hover {
@@ -261,10 +423,10 @@
 }
 
 .price-history-graph {
-  height: 100px;
+  height: 120px;
   margin-top: 1rem;
   position: relative;
-  background: #f9f9f9;
+  background: rgba(0, 0, 0, 0.03);
   border-radius: 4px;
   padding: 0.5rem;
 }
@@ -274,8 +436,8 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #666;
-  font-size: 0.9rem;
+  color: var(--reference-price-color, #666);
+  font-size: calc(var(--font-size) * 0.9);
 }
 
 /* Compliance status section */
@@ -285,7 +447,7 @@
   padding: 0.75rem;
   margin-top: 1rem;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: calc(var(--font-size) * 0.9);
 }
 
 .compliance-status.compliant {
@@ -315,28 +477,32 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24'%3E%3Cpath fill='%23e67e22' d='M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z'%3E%3C/path%3E%3C/svg%3E");
 }
 
-/* Responsive adjustments */
-@media (max-width: 640px) {
-  .current-price {
-    font-size: 1.25rem;
-  }
-  
-  .reference-price,
-  .reference-price-label {
-    font-size: 0.8rem;
-  }
-  
-  .price-history-graph {
-    height: 80px;
-  }
+/* Display style adjustments */
+/* Minimal style */
+[data-display-style="minimal"] .sale-dates,
+[data-display-style="minimal"] .regular-price-container,
+[data-display-style="minimal"] .tracking-info,
+[data-display-style="minimal"] .price-history-container {
+  display: none;
 }
 
-/* Adaptations for the compact mode */
+[data-display-style="minimal"] .compliance-status {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  font-size: calc(var(--font-size) * 0.8);
+}
+
+/* Compact style */
 [data-display-style="compact"] .norwegian-compliance-pricing {
   flex-direction: row;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
+}
+
+[data-display-style="compact"] .reference-price-container {
+  flex: 1;
+  min-width: 200px;
 }
 
 [data-display-style="compact"] .sale-dates,
@@ -346,33 +512,67 @@
 
 [data-display-style="compact"] .price-history-container,
 [data-display-style="compact"] .compliance-status {
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .norwegian-compliance-container {
+    padding: 0.75rem;
+  }
+  
+  .current-price {
+    font-size: calc(var(--font-size) * 1.3);
+  }
+  
+  .reference-price,
+  .reference-price-label {
+    font-size: calc(var(--font-size) * 0.8);
+  }
+  
+  [data-display-style="compact"] .norwegian-compliance-pricing {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  [data-display-style="compact"] .reference-price-container {
+    width: 100%;
+  }
+  
+  .price-history-graph {
+    height: 100px;
+  }
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Apply custom settings from the block settings
-  const container = document.querySelector('.norwegian-compliance-container');
-  if (!container) return;
+  // Find all compliance containers on the page
+  const containers = document.querySelectorAll('.norwegian-compliance-container');
   
-  // Apply settings from block
-  const displayStyle = "{{ block.settings.display_style }}";
-  const salePriceColor = "{{ block.settings.sale_price_color }}";
-  const referencePriceColor = "{{ block.settings.reference_price_color }}";
+  containers.forEach(container => {
+    const productId = container.getAttribute('data-product-id');
+    const variantId = container.getAttribute('data-variant-id');
+    
+    if (!productId || !variantId) return;
+    
+    // Apply visual customizations based on settings
+    applyCustomStyling(container);
+    
+    // Initialize the price history chart if it exists
+    initPriceHistoryChart(container);
+    
+    // Optional: Fetch real-time compliance data from the app
+    fetchComplianceData(container, productId, variantId);
+  });
   
-  // Set display style data attribute
-  container.setAttribute('data-display-style', displayStyle);
-  
-  // Set custom colors
-  container.style.setProperty('--sale-price-color', salePriceColor);
-  container.style.setProperty('--reference-price-color', referencePriceColor);
-  
-  // Initialize price history chart if the element exists
-  initPriceHistoryChart();
+  // Apply styling configurations
+  function applyCustomStyling(container) {
+    // This is handled through CSS variables, but we can add additional styling here if needed
+  }
   
   // Initialize price history chart
-  function initPriceHistoryChart() {
+  function initPriceHistoryChart(container) {
     const historyElement = container.querySelector('.price-history-graph');
     if (!historyElement) return;
     
@@ -380,6 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let priceHistory;
     try {
       // In a real implementation, this would be actual data from metafields
+      // For now, let's assume we have some JSON data in a data attribute
       priceHistory = JSON.parse(historyElement.getAttribute('data-history') || '[]');
     } catch (e) {
       console.error('Error parsing price history:', e);
@@ -388,7 +589,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // If no price history or empty, show a message
     if (!priceHistory || priceHistory.length === 0) {
-      historyElement.innerHTML = '<div class="price-history-placeholder">Ingen prishistorikk tilgjengelig</div>';
+      historyElement.innerHTML = '<div class="price-history-placeholder">No price history available</div>';
       return;
     }
     
@@ -405,15 +606,19 @@ document.addEventListener('DOMContentLoaded', function() {
     element.innerHTML = '';
     
     // Sample implementation of a simple SVG line chart
-    // In a real app, you'd want to properly scale and format this
     const width = element.clientWidth;
     const height = element.clientHeight;
     const padding = 20;
     
     // Calculate min and max values
     const prices = priceData.map(d => d.price);
-    const minPrice = Math.min(...prices) * 0.9; // 10% padding
-    const maxPrice = Math.max(...prices) * 1.1; // 10% padding
+    const comparePrices = priceData
+      .filter(d => d.compareAtPrice)
+      .map(d => d.compareAtPrice);
+    
+    const allPrices = [...prices, ...comparePrices].filter(p => p !== null && p !== undefined);
+    const minPrice = Math.min(...allPrices) * 0.9; // 10% padding
+    const maxPrice = Math.max(...allPrices) * 1.1; // 10% padding
     
     // Create SVG
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -421,31 +626,13 @@ document.addEventListener('DOMContentLoaded', function() {
     svg.setAttribute('height', '100%');
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
     
-    // Create polyline for price history
-    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    
-    // Generate points for the polyline
-    const points = priceData.map((d, i) => {
-      const x = padding + ((width - 2 * padding) * i / (priceData.length - 1));
-      const y = height - padding - ((height - 2 * padding) * (d.price - minPrice) / (maxPrice - minPrice));
-      return `${x},${y}`;
-    }).join(' ');
-    
-    polyline.setAttribute('points', points);
-    polyline.setAttribute('fill', 'none');
-    polyline.setAttribute('stroke', '#2c6ecb');
-    polyline.setAttribute('stroke-width', '2');
-    
-    // Add to SVG
-    svg.appendChild(polyline);
-    
-    // Add axis lines
+    // Add axes
     const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     xAxis.setAttribute('x1', padding);
     xAxis.setAttribute('y1', height - padding);
     xAxis.setAttribute('x2', width - padding);
     xAxis.setAttribute('y2', height - padding);
-    xAxis.setAttribute('stroke', '#ccc');
+    xAxis.setAttribute('stroke', '#ddd');
     xAxis.setAttribute('stroke-width', '1');
     svg.appendChild(xAxis);
     
@@ -454,30 +641,172 @@ document.addEventListener('DOMContentLoaded', function() {
     yAxis.setAttribute('y1', padding);
     yAxis.setAttribute('x2', padding);
     yAxis.setAttribute('y2', height - padding);
-    yAxis.setAttribute('stroke', '#ccc');
+    yAxis.setAttribute('stroke', '#ddd');
     yAxis.setAttribute('stroke-width', '1');
     svg.appendChild(yAxis);
     
-    // Add to the container
+    // Scale functions
+    const scaleX = (i) => padding + ((width - 2 * padding) * i / (priceData.length - 1));
+    const scaleY = (price) => height - padding - ((height - 2 * padding) * (price - minPrice) / (maxPrice - minPrice));
+    
+    // Create polyline for regular price
+    const priceLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    const pricePoints = priceData.map((d, i) => `${scaleX(i)},${scaleY(d.price)}`).join(' ');
+    priceLine.setAttribute('points', pricePoints);
+    priceLine.setAttribute('fill', 'none');
+    priceLine.setAttribute('stroke', '#008060');
+    priceLine.setAttribute('stroke-width', '2');
+    svg.appendChild(priceLine);
+    
+    // Create polyline for compare-at price (reference price) if available
+    const comparePriceData = priceData.filter(d => d.compareAtPrice);
+    if (comparePriceData.length > 0) {
+      const compareAtPriceLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      const comparePoints = comparePriceData.map((d, i, filtered) => {
+        const originalIndex = priceData.findIndex(p => p.date === d.date);
+        return `${scaleX(originalIndex)},${scaleY(d.compareAtPrice)}`;
+      }).join(' ');
+      
+      compareAtPriceLine.setAttribute('points', comparePoints);
+      compareAtPriceLine.setAttribute('fill', 'none');
+      compareAtPriceLine.setAttribute('stroke', '#637381');
+      compareAtPriceLine.setAttribute('stroke-width', '2');
+      compareAtPriceLine.setAttribute('stroke-dasharray', '4,4');
+      svg.appendChild(compareAtPriceLine);
+    }
+    
+    // Add legend
+    const legend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    legend.setAttribute('transform', `translate(${width - 100}, 10)`);
+    
+    const legendBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    legendBg.setAttribute('width', '90');
+    legendBg.setAttribute('height', '40');
+    legendBg.setAttribute('rx', '4');
+    legendBg.setAttribute('fill', 'white');
+    legendBg.setAttribute('fill-opacity', '0.8');
+    legend.appendChild(legendBg);
+    
+    // Current price line
+    const currentPriceLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    currentPriceLine.setAttribute('x1', '5');
+    currentPriceLine.setAttribute('y1', '15');
+    currentPriceLine.setAttribute('x2', '25');
+    currentPriceLine.setAttribute('y2', '15');
+    currentPriceLine.setAttribute('stroke', '#008060');
+    currentPriceLine.setAttribute('stroke-width', '2');
+    legend.appendChild(currentPriceLine);
+    
+    const currentPriceText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    currentPriceText.setAttribute('x', '30');
+    currentPriceText.setAttribute('y', '18');
+    currentPriceText.setAttribute('font-size', '10');
+    currentPriceText.setAttribute('fill', '#333');
+    currentPriceText.textContent = 'Price';
+    legend.appendChild(currentPriceText);
+    
+    // Reference price line
+    const refPriceLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    refPriceLine.setAttribute('x1', '5');
+    refPriceLine.setAttribute('y1', '30');
+    refPriceLine.setAttribute('x2', '25');
+    refPriceLine.setAttribute('y2', '30');
+    refPriceLine.setAttribute('stroke', '#637381');
+    refPriceLine.setAttribute('stroke-width', '2');
+    refPriceLine.setAttribute('stroke-dasharray', '4,4');
+    legend.appendChild(refPriceLine);
+    
+    const refPriceText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    refPriceText.setAttribute('x', '30');
+    refPriceText.setAttribute('y', '33');
+    refPriceText.setAttribute('font-size', '10');
+    refPriceText.setAttribute('fill', '#333');
+    refPriceText.textContent = 'Ref';
+    legend.appendChild(refPriceText);
+    
+    svg.appendChild(legend);
+    
+    // Add to element
     element.appendChild(svg);
     
-    // Add a simple legend below
-    const legend = document.createElement('div');
-    legend.style.fontSize = '0.8rem';
-    legend.style.color = '#666';
-    legend.style.marginTop = '0.5rem';
-    legend.style.textAlign = 'center';
-    
-    const firstDate = new Date(priceData[0].date);
-    const lastDate = new Date(priceData[priceData.length - 1].date);
-    
-    legend.textContent = `${formatDate(firstDate)} - ${formatDate(lastDate)}`;
-    element.appendChild(legend);
+    // Add date range text
+    if (priceData.length > 0) {
+      const dateRange = document.createElement('div');
+      dateRange.className = 'price-history-date-range';
+      dateRange.style.fontSize = '10px';
+      dateRange.style.color = '#637381';
+      dateRange.style.textAlign = 'center';
+      dateRange.style.marginTop = '5px';
+      
+      const startDate = new Date(priceData[0].date);
+      const endDate = new Date(priceData[priceData.length - 1].date);
+      
+      const formatDate = (date) => {
+        return date.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      };
+      
+      dateRange.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+      element.appendChild(dateRange);
+    }
   }
   
-  // Helper to format dates in Norwegian format
-  function formatDate(date) {
-    return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+  // Fetch compliance data from the app's API
+  function fetchComplianceData(container, productId, variantId) {
+    // Get shop domain from URL
+    const shopDomain = window.Shopify ? window.Shopify.shop : window.location.hostname;
+    
+    // Construct API URL - this would point to your app's proxy endpoint
+    const apiUrl = `/apps/price-compliance/api/compliance/${productId}/${variantId}?shop=${shopDomain}`;
+    
+    // Fetch data
+    fetch(apiUrl)
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) throw new Error(data.error || 'Unknown error');
+        
+        // Update compliance status
+        updateComplianceStatus(container, data);
+        
+        // Update price history if we received it
+        if (data.priceHistory && data.priceHistory.length > 0) {
+          const historyElement = container.querySelector('.price-history-graph');
+          if (historyElement) {
+            renderPriceHistoryChart(historyElement, data.priceHistory);
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching compliance data:', error);
+        // Don't show errors to end users - just keep displaying the static content
+      });
+  }
+  
+  // Update compliance status based on API response
+  function updateComplianceStatus(container, data) {
+    const statusElement = container.querySelector('.compliance-status');
+    if (!statusElement) return;
+    
+    // Update class
+    if (data.isCompliant) {
+      statusElement.classList.add('compliant');
+      statusElement.classList.remove('non-compliant');
+    } else {
+      statusElement.classList.add('non-compliant');
+      statusElement.classList.remove('compliant');
+    }
+    
+    // Update text content if we have specific issues
+    const textElement = statusElement.querySelector('.compliance-text');
+    if (textElement && data.issues && data.issues.length > 0) {
+      // Just show the first issue for simplicity
+      textElement.textContent = data.issues[0].message;
+    }
   }
 });
-</script>
