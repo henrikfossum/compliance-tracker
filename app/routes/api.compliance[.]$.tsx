@@ -1,9 +1,7 @@
-// app/routes/api.compliance.$productId.$variantId.tsx
+// app/routes/api.compliance[.]$.tsx
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { productId, variantId } = params;
-  
   // Add CORS headers for cross-origin requests
   const headers = new Headers();
   headers.set("Access-Control-Allow-Origin", "*");
@@ -17,12 +15,44 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     });
   }
   
-  // Get shop from query params
+  // Get the URL path and extract product/variant IDs regardless of order
   const url = new URL(request.url);
   const shop = url.searchParams.get("shop") || "";
   
-  // Log for debugging
-  console.log(`API Request received for Shop: ${shop}, Product: ${productId}, Variant: ${variantId}`);
+  // Get the path from the URL
+  const path = url.pathname;
+  console.log(`API Request received for path: ${path}, Shop: ${shop}`);
+  
+  // Extract product and variant IDs from the path
+  // This approach is more flexible and will work with various URL formats
+  const pathSegments = path.split('/').filter(Boolean);
+  let productId = '', variantId = '';
+  
+  // Extract IDs from path segments
+  for (const segment of pathSegments) {
+    // Look for numbers that might be IDs
+    if (/^\d+$/.test(segment)) {
+      if (!productId) {
+        productId = segment;
+      } else if (!variantId) {
+        variantId = segment;
+      }
+    }
+  }
+  
+  // If we still don't have both IDs, try to extract from query params
+  if (!productId || !variantId) {
+    const urlParams = new URLSearchParams(url.search);
+    for (const [key, value] of urlParams.entries()) {
+      if (key.includes('variant') && /^\d+$/.test(value)) {
+        variantId = value;
+      } else if (key.includes('product') && /^\d+$/.test(value)) {
+        productId = value;
+      }
+    }
+  }
+  
+  console.log(`Extracted Product ID: ${productId}, Variant ID: ${variantId}`);
   
   // Always generate mock data so widget always works
   const mockData = generateMockData();
