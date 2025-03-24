@@ -852,65 +852,60 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Fetch compliance data from the app's API with fallback
-  function fetchComplianceData(container, productId, variantId) {
-    // Get shop domain from URL
-    const shopDomain = window.Shopify ? window.Shopify.shop : window.location.hostname;
-    
-    // Try multiple API URL formats to find one that works
-    // First try the format that matches the request URL in the error
-    const apiUrl1 = `/apps/price-compliance/api/compliance/${variantId}?shop=${shopDomain}`;
-    
-    // Also try the original URL format
-    const apiUrl2 = `/apps/price-compliance/api/compliance/${productId}/${variantId}?shop=${shopDomain}`;
-    
-    // Try a third format with variant ID first
-    const apiUrl3 = `/${variantId}?shop=${shopDomain}/apps/price-compliance/api/compliance/${productId}`;
-    
-    // Use fallback demo data immediately for better user experience
-    const today = new Date();
-    const demoData = createDemoData(today);
-    
-    const historyElement = container.querySelector('.price-history-graph');
-    if (historyElement) {
-      renderPriceHistoryChart(historyElement, demoData);
-    }
-    
-    // Function to try a specific URL format
-    function tryFetchUrl(url) {
-      return fetch(url)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`API response not OK: ${response.status}`);
-          }
-          return response.json();
-        });
-    }
-    
-    // Try each URL format in succession
-    tryFetchUrl(apiUrl1)
-      .catch(() => tryFetchUrl(apiUrl2))
-      .catch(() => tryFetchUrl(apiUrl3))
-      .then(data => {
-        if (!data.success) {
-          throw new Error(data.error || 'Unknown error');
+function fetchComplianceData(container, productId, variantId) {
+  // Get shop domain from URL
+  const shopDomain = window.Shopify ? window.Shopify.shop : window.location.hostname;
+  
+  // Try API URL formats that match your existing routes
+  const apiUrl1 = `/api/compliance/${productId}/${variantId}?shop=${shopDomain}`;
+  const apiUrl2 = `/api/compliance/${variantId}?shop=${shopDomain}`;
+  const apiUrl3 = `/api/compliance?productId=${productId}&variantId=${variantId}&shop=${shopDomain}`;
+  
+  // Use fallback demo data immediately for better user experience
+  const today = new Date();
+  const demoData = createDemoData(today);
+  
+  const historyElement = container.querySelector('.price-history-graph');
+  if (historyElement) {
+    renderPriceHistoryChart(historyElement, demoData);
+  }
+  
+  // Function to try a specific URL format
+  function tryFetchUrl(url) {
+    return fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`API response not OK: ${response.status}`);
         }
-        
-        // Update compliance status
-        updateComplianceStatus(container, data);
-        
-        // Update price history if we received it
-        if (data.priceHistory && data.priceHistory.length > 0) {
-          const historyElement = container.querySelector('.price-history-graph');
-          if (historyElement) {
-            renderPriceHistoryChart(historyElement, data.priceHistory);
-          }
-        }
-      })
-      .catch(error => {
-        console.log('Could not fetch compliance data:', error);
-        // Chart is already rendered with demo data, so no further action needed
+        return response.json();
       });
   }
+  
+  // Try each URL format in succession
+  tryFetchUrl(apiUrl1)
+    .catch(() => tryFetchUrl(apiUrl2))
+    .catch(() => tryFetchUrl(apiUrl3))
+    .then(data => {
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
+      
+      // Update compliance status
+      updateComplianceStatus(container, data);
+      
+      // Update price history if we received it
+      if (data.priceHistory && data.priceHistory.length > 0) {
+        const historyElement = container.querySelector('.price-history-graph');
+        if (historyElement) {
+          renderPriceHistoryChart(historyElement, data.priceHistory);
+        }
+      }
+    })
+    .catch(error => {
+      console.log('Could not fetch compliance data:', error);
+      // Chart is already rendered with demo data, so no further action needed
+    });
+}
   
   // Update compliance status based on API response
   function updateComplianceStatus(container, data) {
