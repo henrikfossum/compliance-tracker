@@ -18,18 +18,13 @@
         <span class="discount-badge">Spar {{ discount_percentage }}%</span>
       </div>
       
+      <!-- Reference Price - Most important part for compliance -->
       <div class="reference-price-container">
         <span class="reference-price">{{ product.compare_at_price | money }}</span>
         <span class="reference-price-label">Laveste pris siste 30 dager</span>
       </div>
       
-      {% if product.metafields.compliance.original_price %}
-        <div class="regular-price-container">
-          <span class="regular-price-label">Ordinær pris:</span>
-          <span class="regular-price">{{ product.metafields.compliance.original_price | money }}</span>
-        </div>
-      {% endif %}
-      
+      <!-- Sale Period Information - For compliance with sale duration rules -->
       {% if product.metafields.compliance.sale_start_date %}
         <div class="sale-dates">
           <span class="sale-period">Salgsperiode: {{ product.metafields.compliance.sale_start_date | date: "%d.%m.%Y" }} 
@@ -39,6 +34,15 @@
           </span>
         </div>
       {% endif %}
+      
+      <!-- Regular price if available -->
+      {% if product.metafields.compliance.original_price %}
+        <div class="regular-price-container">
+          <span class="regular-price-label">Ordinær pris:</span>
+          <span class="regular-price">{{ product.metafields.compliance.original_price | money }}</span>
+        </div>
+      {% endif %}
+      
     {% else %}
       <!-- Regular price mode - show simplified display -->
       <div class="regular-mode-message">
@@ -80,17 +84,6 @@
       </span>
     </div>
   {% endif %}
-  
-  <!-- Debug section - Remove for production -->
-  {% comment %}
-  <div style="margin-top: 1rem; padding: 0.5rem; background: #f5f5f5; border: 1px solid #ddd; font-size: 12px;">
-    <div>Product ID: {{ product.id }}</div>
-    <div>Variant ID: {{ product.selected_or_first_available_variant.id }}</div>
-    <div>Has compare price: {% if product.compare_at_price > product.price %}Yes{% else %}No{% endif %}</div>
-    <div>Current price: {{ product.price | money }}</div>
-    <div>Compare price: {{ product.compare_at_price | money }}</div>
-  </div>
-  {% endcomment %}
 </div>
 
 {% schema %}
@@ -208,23 +201,29 @@
   font-style: italic;
 }
 
-/* Reference price (førpris) */
+/* Reference price (førpris) - Key for compliance */
 .reference-price-container {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0.5rem;
+  padding: 0.5rem;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  border-left: 3px solid var(--reference-price-color, #666);
 }
 
 .reference-price {
   text-decoration: line-through;
   color: var(--reference-price-color, #666);
   font-size: 1rem;
+  font-weight: 500;
 }
 
 .reference-price-label {
   font-size: 0.85rem;
-  color: var(--reference-price-color, #666);
+  font-weight: 600;
+  color: #444;
 }
 
 /* Regular price if shown */
@@ -239,6 +238,9 @@
   font-size: 0.85rem;
   color: #666;
   margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #f9f9f9;
+  border-radius: 4px;
 }
 
 /* Price history section */
