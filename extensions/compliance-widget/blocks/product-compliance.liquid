@@ -857,10 +857,11 @@ function fetchComplianceData(container, productId, variantId) {
   const shopDomain = window.Shopify ? window.Shopify.shop : window.location.hostname;
   
   // Try API URL formats that match your existing routes
-  const apiUrl1 = `/api/compliance/${productId}/${variantId}?shop=${shopDomain}`;
-  const apiUrl2 = `/api/compliance/${variantId}?shop=${shopDomain}`;
-  const apiUrl3 = `/api/compliance?productId=${productId}&variantId=${variantId}&shop=${shopDomain}`;
-  
+  const apiUrl1 = `/apps/compliance/${productId}/${variantId}?shop=${shopDomain}`;
+  const apiUrl2 = `/apps/compliance/${variantId}?shop=${shopDomain}`;
+  const apiUrl3 = `/apps/compliance?productId=${productId}&variantId=${variantId}&shop=${shopDomain}`;
+
+    
   // Use fallback demo data immediately for better user experience
   const today = new Date();
   const demoData = createDemoData(today);

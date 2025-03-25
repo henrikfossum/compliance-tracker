@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "9f0198e2ef79dda2cea9e4cba2e9cfa1"
-application_url = "https://empire-diagnostic-qty-affiliated.trycloudflare.com"
+application_url = "https://singing-forestry-tattoo-ministries.trycloudflare.com"
 embedded = true
 name = "compliance-tracker"
 handle = "compliance-tracker"
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://empire-diagnostic-qty-affiliated.trycloudflare.com/auth/callback",
-  "https://empire-diagnostic-qty-affiliated.trycloudflare.com/auth/shopify/callback",
-  "https://empire-diagnostic-qty-affiliated.trycloudflare.com/api/auth/callback"
+  "https://singing-forestry-tattoo-ministries.trycloudflare.com/auth/callback",
+  "https://singing-forestry-tattoo-ministries.trycloudflare.com/auth/shopify/callback",
+  "https://singing-forestry-tattoo-ministries.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
@@ -38,5 +38,5 @@ embedded = false
 [app_proxy]
 prefix = "apps"
 subpath = "compliance"
-url = "https://empire-diagnostic-qty-affiliated.trycloudflare.com//api/compliance"
+url = "https://singing-forestry-tattoo-ministries.trycloudflare.com/api/compliance"
 description = "Price compliance API"

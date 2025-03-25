@@ -1,4 +1,8 @@
 // app/routes/api.compliance.$productId.$variantId.tsx
+export const handle = {
+  isPublicRoute: true,
+};
+
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
