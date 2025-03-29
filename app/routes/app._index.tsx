@@ -1,3 +1,4 @@
+// app/routes/app._index.tsx
 import { useEffect } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { useFetcher } from "@remix-run/react";
@@ -9,13 +10,22 @@ import {
   Button,
   BlockStack,
   Box,
-  List,
-  Link as PolarisLink,
   InlineStack,
+  Icon,
+  Badge,
+  Link,
+  LegacyCard,
+  ProgressBar,
+  Avatar,
 } from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import { 
+  AlertDiamondIcon, 
+  CheckIcon, 
+  ChartVerticalIcon, 
+  ProductIcon
+} from '@shopify/polaris-icons';
 import { authenticate } from "../shopify.server";
-import { Link } from "@remix-run/react";
+import { Link as RemixLink } from "@remix-run/react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -99,7 +109,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function Index() {
   const fetcher = useFetcher<typeof action>();
-  const shopify = useAppBridge();
   
   const isLoading =
     ["loading", "submitting"].includes(fetcher.state) &&
@@ -109,189 +118,293 @@ export default function Index() {
     "gid://shopify/Product/",
     "",
   );
-
-  useEffect(() => {
-    if (productId) {
-      shopify.toast.show("Product created");
-    }
-  }, [productId, shopify]);
   
   const generateProduct = () => fetcher.submit({}, { method: "POST" });
+  
+  // Stats data (would be replaced with real data in production)
+  const complianceStats = {
+    complianceRate: "92.5%",
+    totalProducts: 48,
+    productsOnSale: 16,
+    nonCompliantCount: 4,
+    lastScanned: "2025-03-26T09:45:00Z"
+  };
+
+  // Issues list (would come from real data in production)
+  const complianceIssues = [
+    {
+      product: "Premium Winter Jacket",
+      issue: "førpris",
+      description: "Reference price issue - sale price is incorrect"
+    },
+    {
+      product: "Outdoor Hiking Boots",
+      issue: "saleDuration",
+      description: "Sale has been running for too long (over 110 days)"
+    }
+  ];
+  
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString(undefined, { 
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
     <Page>
-      <TitleBar title="Price Compliance Tracker">
-        <Button variant="primary" onClick={generateProduct}>
-          Generate a product
-        </Button>
-      </TitleBar>
       <BlockStack gap="500">
+        {/* Greeting section */}
+        <Card>
+          <BlockStack gap="400">
+            <InlineStack gap="400" align="space-between">
+              <BlockStack gap="200">
+                <Text as="h1" variant="headingXl">
+                  Price Compliance Dashboard
+                </Text>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  Ensure your store's pricing meets Norwegian regulations
+                </Text>
+              </BlockStack>
+              <Button
+                variant="primary"
+                url="/app/compliance"
+              >
+                Go to Compliance Center
+              </Button>
+            </InlineStack>
+          </BlockStack>
+        </Card>
+        
+        {/* Stats cards */}
         <Layout>
-          <Layout.Section>
+          <Layout.Section variant="oneHalf">
             <Card>
-              <BlockStack gap="500">
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Congrats on creating a new Shopify app 🎉
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    This embedded app template uses{" "}
-                    <PolarisLink
-                      url="https://shopify.dev/docs/apps/tools/app-bridge"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      App Bridge
-                    </PolarisLink>{" "}
-                    interface examples like an{" "}
-                    <Link to="/app/compliance" style={{ color: '#2c6ecb', textDecoration: 'none' }}>
-                      compliance page
-                    </Link>
-                    , as well as an{" "}
-                    <PolarisLink
-                      url="https://shopify.dev/docs/api/admin-graphql"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      Admin GraphQL
-                    </PolarisLink>{" "}
-                    mutation demo, to provide a starting point for app
-                    development.
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">
-                    Get started with products
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    Generate a product with GraphQL and get the JSON output for
-                    that product. Learn more about the{" "}
-                    <PolarisLink
-                      url="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      productCreate
-                    </PolarisLink>{" "}
-                    mutation in our API references.
-                  </Text>
-                </BlockStack>
-                <InlineStack gap="300">
-                  <Button loading={isLoading} onClick={generateProduct}>
-                    Generate a product
-                  </Button>
-                  {fetcher.data?.product && (
-                    <Button
-                      url={`shopify:admin/products/${productId}`}
-                      target="_blank"
-                      variant="plain"
-                    >
-                      View product
-                    </Button>
-                  )}
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">Compliance Status</Text>
+                <InlineStack gap="500" wrap={false}>
+                  <div style={{ 
+                    width: '120px', 
+                    height: '120px', 
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <div style={{ position: 'absolute', width: '100%', height: '100%' }}>
+                      <svg viewBox="0 0 36 36" width="100%" height="100%">
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#E4E5E7"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#008060"
+                          strokeWidth="2"
+                          strokeDasharray="92.5, 100"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </div>
+                    <Text as="p" variant="heading2xl">
+                      {complianceStats.complianceRate}
+                    </Text>
+                  </div>
+                  <BlockStack gap="300">
+                    <BlockStack gap="100">
+                      <Text as="p" variant="bodyMd" tone="subdued">Total Products</Text>
+                      <Text as="p" variant="headingLg">{complianceStats.totalProducts}</Text>
+                    </BlockStack>
+                    <BlockStack gap="100">
+                      <Text as="p" variant="bodyMd" tone="subdued">Products on Sale</Text>
+                      <Text as="p" variant="headingLg">{complianceStats.productsOnSale}</Text>
+                    </BlockStack>
+                    <BlockStack gap="100">
+                      <Text as="p" variant="bodyMd" tone="subdued">Non-compliant</Text>
+                      <Text as="p" variant="headingLg">{complianceStats.nonCompliantCount}</Text>
+                    </BlockStack>
+                  </BlockStack>
                 </InlineStack>
-                {fetcher.data?.product && (
-                  <>
-                    <Text as="h3" variant="headingMd">
-                      productCreate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.product, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                    <Text as="h3" variant="headingMd">
-                      productVariantsBulkUpdate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.variant, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                  </>
-                )}
+                <Box paddingBlockStart="200">
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Last scanned: {formatDate(complianceStats.lastScanned)}
+                  </Text>
+                </Box>
               </BlockStack>
             </Card>
           </Layout.Section>
-          <Layout.Section variant="oneThird">
-            <BlockStack gap="500">
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Price Compliance Features
-                  </Text>
+          
+            <Layout.Section>
+              <Layout>
+                <Layout.Section>
+                  <Card>
+                    <BlockStack gap="400">
+                      <Text as="h2" variant="headingMd">Compliance Issues</Text>
+
+                      {complianceIssues.length > 0 ? (
+                        <BlockStack gap="300">
+                          {complianceIssues.map((issue, index) => (
+                            <InlineStack key={index} gap="300" align="start" blockAlign="center">
+                              <div style={{ paddingTop: '2px' }}>
+                                <Icon source={AlertDiamondIcon} tone="critical" />
+                              </div>
+                              <BlockStack gap="100">
+                                <Text as="p" variant="bodyMd" fontWeight="semibold">
+                                  {issue.product}
+                                </Text>
+                                <InlineStack gap="200">
+                                  <Badge tone="critical">{issue.issue}</Badge>
+                                  <Text as="p" variant="bodySm" tone="subdued">
+                                    {issue.description}
+                                  </Text>
+                                </InlineStack>
+                              </BlockStack>
+                            </InlineStack>
+                          ))}
+
+                          <Box paddingBlockStart="200">
+                            <Button 
+                              variant="primary" 
+                              url="/app/compliance"
+                            >
+                              Review All Issues
+                            </Button>
+                          </Box>
+                        </BlockStack>
+                      ) : (
+                        <InlineStack gap="300" align="center">
+                          <Icon source={CheckIcon} tone="success" />
+                          <Text as="p">No compliance issues detected.</Text>
+                        </InlineStack>
+                      )}
+                    </BlockStack>
+                  </Card>
+                </Layout.Section>
+
+                {/* Optional second half section */}
+                <Layout.Section>
+                  {/* Add another card here if needed */}
+                </Layout.Section>
+              </Layout>
+            </Layout.Section>
+          </Layout>
+
+        
+        {/* Regulations card */}
+        <Card>
+          <BlockStack gap="400">
+            <Text as="h2" variant="headingMd">Norwegian Pricing Regulations</Text>
+            <LegacyCard sectioned>
+              <BlockStack gap="400">
+                <InlineStack wrap={false} blockAlign="center" gap="500">
                   <BlockStack gap="200">
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Price Tracking
-                      </Text>
-                      <Text as="span" variant="bodyMd" fontWeight="bold">
-                        Automated
-                      </Text>
+                    <InlineStack align="center" gap="200">
+                      <Badge tone="success">Førpris</Badge>
+                      <Text as="span" variant="headingSm">Reference Price Requirement</Text>
                     </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Compliance Rules
-                      </Text>
-                      <Text as="span" variant="bodyMd" fontWeight="bold">
-                        Norway
-                      </Text>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Rule Checks
-                      </Text>
-                      <Text as="span" variant="bodyMd" fontWeight="bold">
-                        Førpris, Sale Duration
-                      </Text>
-                    </InlineStack>
+                    <Text as="p" variant="bodyMd">
+                      Reference prices must be the lowest price used in the 30 days before the sale starts.
+                    </Text>
                   </BlockStack>
-                </BlockStack>
-              </Card>
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Next steps
+                  
+                  <BlockStack gap="200">
+                    <InlineStack align="center" gap="200">
+                      <Badge tone="success">Duration</Badge>
+                      <Text as="span" variant="headingSm">Sale Duration</Text>
+                    </InlineStack>
+                    <Text as="p" variant="bodyMd">
+                      Sales should not last more than 30% of the year (approximately 110 days).
+                    </Text>
+                  </BlockStack>
+                  
+                  <BlockStack gap="200">
+                    <InlineStack align="center" gap="200">
+                      <Badge tone="success">Frequency</Badge>
+                      <Text as="span" variant="headingSm">Sales Frequency</Text>
+                    </InlineStack>
+                    <Text as="p" variant="bodyMd">
+                      Products should not be on sale too frequently. Ensure sufficient time between sales.
+                    </Text>
+                  </BlockStack>
+                </InlineStack>
+                
+                <Link url="https://forbrukertilsynet.no/veiledning-om-reglene-som-gjelder-ved-markedsforing-av-salg-og-betingede-tilbud" external>
+                  View complete regulations (Forbrukertilsynet)
+                </Link>
+              </BlockStack>
+            </LegacyCard>
+          </BlockStack>
+        </Card>
+        
+        {/* Demo tools */}
+        <Card>
+          <BlockStack gap="400">
+            <Text as="h2" variant="headingMd">Testing & Demo Tools</Text>
+            <BlockStack gap="300">
+              <InlineStack align="space-between">
+                <BlockStack gap="100">
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">Create Test Product</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Generate a sample product to test the compliance functions
                   </Text>
-                  <List>
-                    <List.Item>
-                      <Link to="/app/compliance" style={{ color: '#2c6ecb', textDecoration: 'none' }}>
-                        Go to Compliance Dashboard
-                      </Link>
-                    </List.Item>
-                    <List.Item>
-                      <PolarisLink
-                        url="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Explore Shopify's API with GraphiQL
-                      </PolarisLink>
-                    </List.Item>
-                  </List>
                 </BlockStack>
-              </Card>
+                <Button 
+                  loading={isLoading} 
+                  onClick={generateProduct}
+                  icon={ProductIcon}
+                >
+                  Generate Product
+                </Button>
+              </InlineStack>
+              
+              <InlineStack align="space-between">
+                <BlockStack gap="100">
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">Create Demo Data</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Generate sample compliance records and price history
+                  </Text>
+                </BlockStack>
+                <Button 
+                  url="/app/populate-demo-data"
+                  icon={ChartVerticalIcon}
+                >
+                  Create Demo Data
+                </Button>
+              </InlineStack>
+              
+              {fetcher.data?.product && (
+                <Box paddingBlockStart="300">
+                  <Card>
+                    <BlockStack gap="200">
+                      <InlineStack align="space-between">
+                        <Text as="p" variant="headingSm">
+                          {fetcher.data.product.title}
+                        </Text>
+                        <Button
+                          url={`shopify:admin/products/${productId}`}
+                          variant="plain"
+                        >
+                          View product
+                        </Button>
+                      </InlineStack>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        Product created successfully! Use this product to test compliance features.
+                      </Text>
+                    </BlockStack>
+                  </Card>
+                </Box>
+              )}
             </BlockStack>
-          </Layout.Section>
-        </Layout>
+          </BlockStack>
+        </Card>
       </BlockStack>
     </Page>
   );

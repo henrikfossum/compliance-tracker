@@ -1,11 +1,11 @@
 {% comment %}
-  @name Premium Price Compliance Widget
-  @description Elegant display of price information compliant with Norwegian pricing regulations
+  @name Elegant Price Analysis Widget
+  @description Modern, clean display of price information with advanced history graph
   @icon price-lookup
   @category products
 {% endcomment %}
 
-<div class="premium-compliance-container" 
+<div class="elegant-price-widget" 
      data-product-id="{{ product.id }}" 
      data-variant-id="{{ product.selected_or_first_available_variant.id }}"
      data-display-style="{{ block.settings.display_style }}"
@@ -23,9 +23,9 @@
         --shadow-intensity: {{ block.settings.shadow_intensity }};
      ">
   
-  <div class="premium-compliance-pricing">
+  <div class="price-main-content">
     {% if product.compare_at_price > product.price %}
-      <!-- Sale Mode - Pricing Information -->
+      <!-- Sale Price Display -->
       <div class="price-section">
         <div class="current-price-section">
           <span class="current-price">{{ product.price | money }}</span>
@@ -34,29 +34,16 @@
           <span class="discount-badge">{{ discount_text }}</span>
         </div>
         
-        <!-- Reference Price - Key for Compliance -->
+        <!-- Reference Price -->
         <div class="reference-price-section">
-          <div class="reference-price-content">
-            <span class="reference-price">{{ product.compare_at_price | money }}</span>
-            <span class="reference-price-label">{{ block.settings.reference_price_label }}</span>
-            <div class="compliance-note">According to Norwegian regulations, this is the lowest price used in the last 30 days.</div>
-          </div>
-          <div class="reference-price-icon">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path fill="currentColor" d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"></path>
-            </svg>
-          </div>
+          <span class="reference-price">{{ product.compare_at_price | money }}</span>
+          <span class="reference-price-label">{{ block.settings.reference_price_label }}</span>
         </div>
       </div>
       
       <!-- Sale Period Information -->
       {% if product.metafields.compliance.sale_start_date %}
         <div class="sale-period-section">
-          <div class="sale-period-icon">
-            <svg viewBox="0 0 24 24" width="16" height="16">
-              <path fill="currentColor" d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"></path>
-            </svg>
-          </div>
           <span class="sale-period">{{ block.settings.sale_period_label }}: 
             {{ product.metafields.compliance.sale_start_date | date: "%d.%m.%Y" }} 
             {% if product.metafields.compliance.sale_end_date %} 
@@ -66,171 +53,113 @@
         </div>
       {% endif %}
       
-      <!-- Regular price if available and if display style is detailed -->
-      {% if block.settings.display_style == 'detailed' and product.metafields.compliance.original_price %}
-        <div class="regular-price-section">
-          <span class="regular-price-label">{{ block.settings.regular_price_label }}:</span>
-          <span class="regular-price">{{ product.metafields.compliance.original_price | money }}</span>
-        </div>
-      {% endif %}
-      
     {% else %}
-      <!-- Regular price mode - show simplified display -->
+      <!-- Regular price display -->
       <div class="regular-mode-section">
         <div class="regular-price-info">
           <span class="current-price regular">{{ product.price | money }}</span>
           <span class="regular-price-label">{{ block.settings.regular_price_label }}</span>
         </div>
-        
-        {% if block.settings.display_style == 'detailed' and product.metafields.compliance.price_tracking_since %}
-          <div class="tracking-info">
-            <div class="tracking-icon">
-              <svg viewBox="0 0 24 24" width="16" height="16">
-                <path fill="currentColor" d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"></path>
-              </svg>
-            </div>
-            <span class="tracking-since">{{ block.settings.tracking_since_label }}: {{ product.metafields.compliance.price_tracking_since | date: "%d.%m.%Y" }}</span>
-          </div>
-        {% endif %}
       </div>
     {% endif %}
   </div>
   
-  {% if block.settings.show_price_history and product.metafields.compliance.price_history %}
+  {% if block.settings.show_price_history %}
     <div class="price-history-container">
-      <details class="price-history-details">
-        <summary>
-          <span class="summary-icon">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path fill="currentColor" d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z"></path>
-            </svg>
-          </span>
-          <span class="summary-text">{{ block.settings.price_history_label }}</span>
-        </summary>
+      <button type="button" class="price-history-toggle" aria-expanded="false" aria-controls="price-history-panel">
+        <span class="toggle-text">{{ block.settings.price_history_label }}</span>
+        <span class="toggle-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18">
+            <path fill="currentColor" d="M7 10l5 5 5-5z"></path>
+          </svg>
+        </span>
+      </button>
+      
+      <div id="price-history-panel" class="price-history-graph-container">
         <div class="price-history-graph" data-history="{{ product.metafields.compliance.price_history | json }}">
-          <!-- Price history graph will be rendered by JavaScript -->
           <div class="price-history-placeholder">
             <div class="loading-spinner"></div>
             <span>{{ block.settings.loading_label }}</span>
           </div>
         </div>
-      </details>
+      </div>
     </div>
   {% endif %}
-  
-      {% if block.settings.show_compliance_status %}
-    <div class="compliance-status {% if product.metafields.compliance.is_compliant != false %}compliant{% else %}non-compliant{% endif %}">
-      <span class="compliance-icon">
-        {% if product.metafields.compliance.is_compliant != false %}
-          <svg viewBox="0 0 24 24" width="20" height="20">
-            <path fill="currentColor" d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"></path>
-          </svg>
-        {% else %}
-          <svg viewBox="0 0 24 24" width="20" height="20">
-            <path fill="currentColor" d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"></path>
-          </svg>
-        {% endif %}
-      </span>
-      <span class="compliance-text">
-        {% if product.metafields.compliance.is_compliant != false %}
-          {{ block.settings.compliant_message }}
-        {% else %}
-          {{ block.settings.non_compliant_message }}
-        {% endif %}
-      </span>
-    </div>
-  {% endif %}
-  
-  <!-- Forbrukertilsynet Compliance Information -->
-  <div class="forbrukertilsynet-notice">
-    <div class="forbrukertilsynet-logo">
-      <svg viewBox="0 0 24 24" width="16" height="16">
-        <path fill="currentColor" d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.1 14.8,9.5V11C15.4,11 16,11.6 16,12.3V15.8C16,16.4 15.4,17 14.7,17H9.2C8.6,17 8,16.4 8,15.7V12.2C8,11.6 8.6,11 9.2,11V9.5C9.2,8.1 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,9.5V11H13.5V9.5C13.5,8.7 12.8,8.2 12,8.2Z"></path>
-      </svg>
-    </div>
-    <span>This product pricing complies with Norwegian price regulations (Forbrukertilsynet)</span>
-  </div>
 </div>
 
 {% schema %}
 {
-  "name": "Premium Price Compliance",
+  "name": "Elegant Price Widget",
   "target": "section",
   "settings": [
     {
       "type": "header",
-      "content": "Display Settings"
+      "content": "Visningsinnstillinger"
     },
     {
       "type": "select",
       "id": "display_style",
-      "label": "Display style",
+      "label": "Visningsstil",
       "options": [
         {
           "value": "minimal",
-          "label": "Minimal (basic information only)"
+          "label": "Minimal (kun basisinformasjon)"
         },
         {
           "value": "compact",
-          "label": "Compact"
+          "label": "Kompakt"
         },
         {
           "value": "detailed",
-          "label": "Detailed"
+          "label": "Detaljert"
         }
       ],
-      "default": "detailed"
+      "default": "compact"
     },
     {
       "type": "checkbox",
       "id": "show_price_history",
-      "label": "Show price history",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_compliance_status",
-      "label": "Show compliance status",
+      "label": "Vis prishistorikk",
       "default": true
     },
     {
       "type": "header",
-      "content": "Visual Customization"
+      "content": "Visuell tilpasning"
     },
     {
       "type": "color",
       "id": "background_color",
-      "label": "Background color",
+      "label": "Bakgrunnsfarge",
       "default": "#ffffff"
     },
     {
       "type": "color",
       "id": "text_color",
-      "label": "Text color",
+      "label": "Tekstfarge",
       "default": "#333333"
     },
     {
       "type": "color",
       "id": "sale_price_color",
-      "label": "Sale price color",
+      "label": "Tilbudsprisfarge",
       "default": "#D72C0D"
     },
     {
       "type": "color",
       "id": "reference_price_color", 
-      "label": "Reference price color",
+      "label": "Referanseprisfarge",
       "default": "#666666"
     },
     {
       "type": "color",
       "id": "accent_color",
-      "label": "Accent color",
-      "default": "#008060"
+      "label": "Aksentfarge",
+      "default": "#0066CC"
     },
     {
       "type": "color",
       "id": "border_color",
-      "label": "Border color",
+      "label": "Kantfarge",
       "default": "#e5e5e5"
     },
     {
@@ -240,17 +169,17 @@
       "max": 10,
       "step": 1,
       "unit": "px",
-      "label": "Border width",
+      "label": "Kantbredde",
       "default": 1
     },
     {
       "type": "select",
       "id": "border_style",
-      "label": "Border style",
+      "label": "Kantstil",
       "options": [
         {
           "value": "none",
-          "label": "None"
+          "label": "Ingen"
         },
         {
           "value": "solid",
@@ -258,11 +187,11 @@
         },
         {
           "value": "dashed",
-          "label": "Dashed"
+          "label": "Stiplet"
         },
         {
           "value": "dotted",
-          "label": "Dotted"
+          "label": "Prikket"
         }
       ],
       "default": "solid"
@@ -274,7 +203,7 @@
       "max": 20,
       "step": 1,
       "unit": "px",
-      "label": "Border radius",
+      "label": "Kantradius",
       "default": 8
     },
     {
@@ -284,7 +213,7 @@
       "max": 18,
       "step": 1,
       "unit": "px",
-      "label": "Base font size",
+      "label": "Grunnfontstørrelse",
       "default": 14
     },
     {
@@ -294,79 +223,60 @@
       "max": 20,
       "step": 1,
       "unit": "px",
-      "label": "Shadow intensity",
+      "label": "Skyggeintensitet",
       "default": 3
     },
     {
       "type": "header",
-      "content": "Text Customization (Norwegian Compliance)"
+      "content": "Teksttilpasning"
     },
     {
       "type": "text",
       "id": "discount_label",
-      "label": "Discount label",
-      "default": "Save {percent}%"
+      "label": "Rabattetikett",
+      "default": "Spar {percent}%"
     },
-          {
+    {
       "type": "text",
       "id": "reference_price_label",
-      "label": "Reference price label",
-      "default": "Lowest price in the last 30 days",
-      "info": "Required by Norwegian price regulations (Forbrukertilsynet)"
+      "label": "Referanseprisetikett",
+      "default": "Laveste pris siste 30 dager"
     },
     {
       "type": "text",
       "id": "sale_period_label",
-      "label": "Sale period label",
-      "default": "Sale period"
+      "label": "Salgsperiodeetikett",
+      "default": "Salgsperiode"
     },
     {
       "type": "text",
       "id": "regular_price_label",
-      "label": "Regular price label",
-      "default": "Regular price"
-    },
-    {
-      "type": "text",
-      "id": "tracking_since_label",
-      "label": "Price tracking since label",
-      "default": "Price tracked since"
+      "label": "Ordinær prisetikett",
+      "default": "Ordinær pris"
     },
     {
       "type": "text",
       "id": "price_history_label",
-      "label": "Price history label",
-      "default": "View price history"
+      "label": "Prishistorikketikett",
+      "default": "Vis prishistorikk"
     },
     {
       "type": "text",
       "id": "loading_label",
-      "label": "Loading label",
-      "default": "Loading price history..."
-    },
-    {
-      "type": "text",
-      "id": "compliant_message",
-      "label": "Compliant status message",
-      "default": "This product's pricing complies with Norwegian regulations"
-    },
-    {
-      "type": "text",
-      "id": "non_compliant_message",
-      "label": "Non-compliant status message",
-      "default": "Contact the store for more information about price history"
+      "label": "Lasteetikett",
+      "default": "Laster prishistorikk..."
     }
   ]
 }
 {% endschema %}
 
 <style>
-/* Premium Norwegian Price Compliance Widget - Modern Redesign */
-.premium-compliance-container {
+/* Elegant Price Widget - Clean Modern Design */
+.elegant-price-widget {
   margin: 1.5rem 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   line-height: 1.5;
-  padding: 1.5rem;
+  padding: 1.25rem;
   background-color: var(--background-color, #ffffff);
   color: var(--text-color, #333333);
   border: var(--border-width, 1px) var(--border-style, solid) var(--border-color, #e5e5e5);
@@ -378,32 +288,33 @@
   overflow: hidden;
 }
 
-/* General Layout Components */
-.premium-compliance-pricing {
+/* Main Price Content */
+.price-main-content {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 /* Price Section */
 .price-section {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .current-price-section {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .current-price {
-  font-size: calc(var(--font-size) * 1.7);
-  font-weight: 700;
+  font-size: calc(var(--font-size) * 1.6);
+  font-weight: 600;
   color: var(--sale-price-color, #D72C0D);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   line-height: 1.2;
 }
 
@@ -417,193 +328,133 @@
   justify-content: center;
   background-color: var(--sale-price-color, #D72C0D);
   color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 4px;
+  padding: 0.25rem 0.6rem;
+  border-radius: 3px;
+  font-size: calc(var(--font-size) * 0.85);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Reference Price */
+.reference-price-section {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   font-size: calc(var(--font-size) * 0.9);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  box-shadow: 0 2px 4px rgba(215, 44, 13, 0.15);
-  margin-top: 2px;
+}
+
+.reference-price {
+  text-decoration: line-through;
+  color: var(--reference-price-color, #666);
+}
+
+.reference-price-label {
+  color: var(--reference-price-color, #666);
+  font-size: calc(var(--font-size) * 0.85);
 }
 
 /* Regular Mode Display */
 .regular-mode-section {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .regular-price-info {
   display: flex;
   align-items: baseline;
-  gap: 1rem;
-}
-
-/* Tracking Info */
-.tracking-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: calc(var(--font-size) * 0.9);
-  color: var(--reference-price-color, #666);
-  padding: 0.5rem;
-  background-color: rgba(0, 0, 0, 0.02);
-  border-radius: 6px;
-  border-left: 3px solid var(--reference-price-color, #666);
-}
-
-.tracking-icon {
-  display: flex;
-  align-items: center;
-  color: var(--reference-price-color, #666);
-  opacity: 0.8;
-}
-
-.tracking-since {
-  font-style: italic;
-}
-
-/* Reference Price (førpris) - Key for compliance */
-.reference-price-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background-color: rgba(0, 0, 0, 0.025);
-  border-radius: 6px;
-  border-left: 3px solid var(--reference-price-color, #666);
-  transition: background-color 0.2s ease;
-}
-
-.reference-price-section:hover {
-  background-color: rgba(0, 0, 0, 0.035);
-}
-
-.reference-price-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.reference-price {
-  text-decoration: line-through;
-  color: var(--reference-price-color, #666);
-  font-size: calc(var(--font-size) * 1.15);
-  font-weight: 500;
-}
-
-.reference-price-label {
-  font-size: calc(var(--font-size) * 0.85);
-  font-weight: 500;
-  color: var(--reference-price-color, #666);
-  opacity: 0.9;
-}
-
-.compliance-note {
-  font-size: calc(var(--font-size) * 0.75);
-  font-style: italic;
-  color: var(--reference-price-color, #666);
-  opacity: 0.8;
-  margin-top: 0.25rem;
-}
-
-.reference-price-icon {
-  color: var(--reference-price-color, #666);
-  opacity: 0.7;
-}
-
-/* Regular price if shown */
-.regular-price-section {
-  font-size: calc(var(--font-size) * 0.9);
-  color: var(--reference-price-color, #666);
-  margin-top: 0.25rem;
-  padding: 0.5rem 0.75rem;
-  background-color: rgba(0, 0, 0, 0.02);
-  border-radius: 4px;
-  display: inline-block;
+  gap: 0.75rem;
 }
 
 .regular-price-label {
-  font-weight: 500;
-  margin-right: 0.25rem;
+  color: var(--reference-price-color, #666);
+  font-size: calc(var(--font-size) * 0.9);
 }
 
 /* Sale Period */
 .sale-period-section {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   font-size: calc(var(--font-size) * 0.9);
   color: var(--reference-price-color, #666);
-  padding: 0.5rem 0.75rem;
-  background-color: rgba(0, 0, 0, 0.02);
-  border-radius: 6px;
-  max-width: fit-content;
-}
-
-.sale-period-icon {
-  display: flex;
-  align-items: center;
-  color: var(--reference-price-color, #666);
-  opacity: 0.8;
+  margin-top: 0.25rem;
 }
 
 /* Price History Section */
 .price-history-container {
-  margin-top: 1.5rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.07);
-  padding-top: 1.25rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 1rem;
 }
 
-.price-history-details {
-  width: 100%;
-}
-
-.price-history-details summary {
-  cursor: pointer;
+/* Modern Toggle Button - Improved Design */
+.price-history-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--accent-color, #008060);
-  font-size: calc(var(--font-size) * 1);
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  background-color: #f5f7fa;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  color: var(--accent-color, #0066CC);
+  font-size: calc(var(--font-size) * 0.95);
   font-weight: 500;
-  padding: 0.5rem;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-  user-select: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
   outline: none;
 }
 
-.price-history-details summary:hover {
-  background-color: rgba(0, 0, 0, 0.03);
+.price-history-toggle:hover {
+  background-color: #edf1f7;
 }
 
-.price-history-details summary::-webkit-details-marker {
-  display: none;
+.price-history-toggle:focus {
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
 }
 
-.summary-icon {
+.toggle-icon {
   display: flex;
   align-items: center;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-details[open] .summary-icon svg {
-  transform: rotate(90deg);
+.price-history-toggle[aria-expanded="true"] {
+  background-color: #edf1f7;
+  border-color: var(--accent-color, #0066CC);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
-.summary-icon svg {
-  transition: transform 0.3s ease;
+.price-history-toggle[aria-expanded="true"] .toggle-icon {
+  transform: rotate(180deg);
+}
+
+/* Graph Container - Improved */
+.price-history-graph-container {
+  display: none;
+  height: 0;
+  overflow: hidden;
+  background-color: #f5f7fa;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: none;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  margin-top: -1px;
+}
+
+.price-history-toggle[aria-expanded="true"] + .price-history-graph-container {
+  display: block;
+  height: 350px;
+  padding: 1.25rem;
 }
 
 .price-history-graph {
-  height: 200px;
-  margin-top: 1.25rem;
+  height: 100%;
+  width: 100%;
   position: relative;
-  background-color: rgba(0, 0, 0, 0.02);
-  border-radius: 8px;
-  padding: 1rem;
+  border-radius: 4px;
   overflow: hidden;
-  transition: height 0.3s ease;
 }
 
 .price-history-placeholder {
@@ -618,10 +469,10 @@ details[open] .summary-icon svg {
 }
 
 .loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-top-color: var(--accent-color, #008060);
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(0, 102, 204, 0.1);
+  border-top-color: var(--accent-color, #0066CC);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -630,275 +481,138 @@ details[open] .summary-icon svg {
   to { transform: rotate(360deg); }
 }
 
-/* Compliance Status Section */
-.compliance-status {
-  display: flex;
-  align-items: center;
-  padding: 0.85rem 1rem;
-  margin-top: 1.5rem;
-  border-radius: 6px;
-  font-size: calc(var(--font-size) * 0.95);
-  gap: 0.75rem;
-  transition: transform 0.2s ease;
-}
-
-.compliance-status:hover {
-  transform: translateY(-1px);
-}
-
-.compliance-status.compliant {
-  background-color: rgba(0, 128, 96, 0.08);
-  color: #008060;
-  border-left: 3px solid #008060;
-}
-
-.compliance-status.non-compliant {
-  background-color: rgba(215, 44, 13, 0.08);
-  color: #D72C0D;
-  border-left: 3px solid #D72C0D;
-}
-
-.compliance-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.compliance-text {
-  line-height: 1.4;
-}
-
-/* Forbrukertilsynet compliance notice */
-.forbrukertilsynet-notice {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding: 0.6rem 0.75rem;
-  background-color: rgba(0, 128, 96, 0.05);
-  border-radius: 5px;
-  font-size: calc(var(--font-size) * 0.8);
-  color: var(--accent-color, #008060);
-  border-left: 3px solid var(--accent-color, #008060);
-}
-
-.forbrukertilsynet-logo {
-  display: flex;
-  align-items: center;
-  color: var(--accent-color, #008060);
-}
-
-@media (max-width: 640px) {
-  .forbrukertilsynet-notice {
-    font-size: calc(var(--font-size) * 0.75);
-  }
-}
-
-/* Display Style Adjustments */
-/* Minimal style */
-[data-display-style="minimal"] .sale-period-section,
-[data-display-style="minimal"] .regular-price-section,
-[data-display-style="minimal"] .tracking-info {
-  display: none;
-}
-
-[data-display-style="minimal"] .price-history-container {
-  margin-top: 1rem;
-  padding-top: 1rem;
-}
-
-[data-display-style="minimal"] .compliance-status {
-  margin-top: 1rem;
-  padding: 0.65rem 0.85rem;
-}
-
-/* Compact style */
-[data-display-style="compact"] .premium-compliance-pricing {
-  gap: 0.85rem;
-}
-
-[data-display-style="compact"] .price-section {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 1rem;
-  align-items: start;
-}
-
-[data-display-style="compact"] .reference-price-section {
-  grid-row: 1;
-  grid-column: 2;
-}
-
-[data-display-style="compact"] .current-price-section {
-  grid-row: 1;
-  grid-column: 1;
-}
-
-[data-display-style="compact"] .sale-period-section {
-  grid-row: 2;
-  grid-column: 1 / -1;
-}
-
 /* Responsive adjustments */
 @media (max-width: 640px) {
-  .premium-compliance-container {
-    padding: 1.25rem;
+  .elegant-price-widget {
+    padding: 1rem;
     margin: 1rem 0;
   }
   
   .current-price {
-    font-size: calc(var(--font-size) * 1.5);
+    font-size: calc(var(--font-size) * 1.4);
   }
   
-  [data-display-style="compact"] .price-section {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .price-history-graph {
-    height: 180px;
+  .price-history-toggle[aria-expanded="true"] + .price-history-graph-container {
+    height: 300px;
   }
 }
 </style>
 
 <script>
 /**
- * Norwegian Price Compliance Widget
+ * Elegant Price Widget
  * 
- * Displays price history and compliance information according to Norwegian price regulations.
- * Features modern visualization, responsive design, and enhanced user experience.
- * Follows Forbrukertilsynet guidelines for price display and transparency.
+ * A modern, clean widget displaying product pricing and historical data
  * 
- * @version 3.0.0
- * @copyright 2025
+ * @version 2.0
  */
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize all compliance widgets on the page
-  const complianceWidgets = document.querySelectorAll('.premium-compliance-container');
+  // Initialize all widgets on the page
+  const priceWidgets = document.querySelectorAll('.elegant-price-widget');
   
-  complianceWidgets.forEach(widget => {
+  priceWidgets.forEach(widget => {
     const productId = widget.getAttribute('data-product-id');
     const variantId = widget.getAttribute('data-variant-id');
     
     if (!productId || !variantId) return;
     
-    // Initialize details elements with smooth animations
-    initializeDetailsElements(widget);
+    // Initialize toggle buttons
+    initializeToggleButtons(widget);
     
-    // Ensure price history section exists
-    ensurePriceHistoryExists(widget);
-    
-    // Fetch actual compliance data from API
-    fetchComplianceData(widget, productId, variantId);
+    // Fetch price data from API
+    fetchPriceData(widget, productId, variantId);
   });
   
   /**
-   * Initializes all details elements with smooth animations and interactions
+   * Initializes toggle buttons for the price history panel
    */
-  function initializeDetailsElements(widget) {
-    const detailsElements = widget.querySelectorAll('details');
+  function initializeToggleButtons(widget) {
+    const toggleButton = widget.querySelector('.price-history-toggle');
+    const historyPanel = widget.querySelector('.price-history-graph-container');
     
-    detailsElements.forEach(details => {
-      const content = details.querySelector('.price-history-graph');
+    if (!toggleButton || !historyPanel) return;
+    
+    toggleButton.addEventListener('click', () => {
+      const expanded = toggleButton.getAttribute('aria-expanded') === 'true';
+      toggleButton.setAttribute('aria-expanded', !expanded);
       
-      // Initialize height for animation
-      if (!details.open && content) {
-        content.style.height = '0px';
-        content.style.opacity = '0';
-        content.style.marginTop = '0px';
-      }
-      
-      details.addEventListener('toggle', () => {
-        if (details.open && content) {
-          // Animate opening
-          content.style.height = '0px';
-          content.style.opacity = '0';
-          content.style.marginTop = '0px';
-          
-          // Trigger animation after a small delay
-          setTimeout(() => {
-            content.style.height = '200px';
-            content.style.opacity = '1';
-            content.style.marginTop = '1.25rem';
-          }, 10);
-        } else if (content) {
-          // Animate closing
-          content.style.height = '0px';
-          content.style.opacity = '0';
-          content.style.marginTop = '0px';
+      if (!expanded) {
+        // If we're expanding, make sure the graph renders properly
+        const graphElement = historyPanel.querySelector('.price-history-graph');
+        if (graphElement) {
+          const historyData = graphElement.getAttribute('data-rendered') !== 'true' ? 
+            generatePriceHistoryData() : null;
+            
+          if (historyData) {
+            setTimeout(() => {
+              renderPriceChart(graphElement, historyData);
+              graphElement.setAttribute('data-rendered', 'true');
+            }, 100);
+          }
         }
-      });
+      }
     });
   }
   
   /**
-   * Ensures the price history section exists in the widget
-   * Creates it if missing based on widget settings
+   * Fetches price data from the API
    */
-  function ensurePriceHistoryExists(widget) {
-    if (widget.querySelector('.price-history-container')) return;
+  function fetchPriceData(widget, productId, variantId) {
+    const shopDomain = window.Shopify ? window.Shopify.shop : window.location.hostname;
     
-    // Create price history container
-    const historyContainer = document.createElement('div');
-    historyContainer.className = 'price-history-container';
+    // Define API URL formats to try
+    const apiUrls = [
+      `/apps/compliance/${productId}/${variantId}?shop=${shopDomain}`,
+      `/apps/compliance/${variantId}?shop=${shopDomain}`,
+      `/apps/compliance?productId=${productId}&variantId=${variantId}&shop=${shopDomain}`,
+      `/api/compliance/${productId}/${variantId}?shop=${shopDomain}`
+    ];
     
-    // Create details element with summary
-    const details = document.createElement('details');
-    details.className = 'price-history-details';
+    // Try each URL format in succession
+    tryFetchUrls(apiUrls, 0)
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || 'Ukjent feil');
+        }
+        
+        // Update price history if we received it
+        if (data.priceHistory && data.priceHistory.length > 0) {
+          const historyElement = widget.querySelector('.price-history-graph');
+          if (historyElement) {
+            // Store the data but don't render until the panel is opened
+            historyElement.setAttribute('data-history-json', JSON.stringify(data.priceHistory));
+          }
+        }
+      })
+      .catch(error => {
+        // We'll use demo data when the panel is opened
+        console.log('Using demo data for chart');
+      });
+  }
+  
+  /**
+   * Tries each URL in succession until one succeeds
+   */
+  function tryFetchUrls(urls, index) {
+    if (index >= urls.length) {
+      return Promise.reject(new Error('Alle API-URLer mislyktes'));
+    }
     
-    const summary = document.createElement('summary');
-    
-    const summaryIcon = document.createElement('span');
-    summaryIcon.className = 'summary-icon';
-    summaryIcon.innerHTML = `
-      <svg viewBox="0 0 24 24" width="18" height="18">
-        <path fill="currentColor" d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z"></path>
-      </svg>
-    `;
-    
-    const summaryText = document.createElement('span');
-    summaryText.className = 'summary-text';
-    summaryText.textContent = 'View price history';
-    
-    summary.appendChild(summaryIcon);
-    summary.appendChild(summaryText);
-    
-    // Create graph container
-    const graph = document.createElement('div');
-    graph.className = 'price-history-graph';
-    
-    // Add loading placeholder
-    const placeholder = document.createElement('div');
-    placeholder.className = 'price-history-placeholder';
-    
-    const spinner = document.createElement('div');
-    spinner.className = 'loading-spinner';
-    
-    const loadingText = document.createElement('span');
-    loadingText.textContent = 'Loading price history...';
-    
-    placeholder.appendChild(spinner);
-    placeholder.appendChild(loadingText);
-    graph.appendChild(placeholder);
-    
-    // Assemble the elements
-    details.appendChild(summary);
-    details.appendChild(graph);
-    historyContainer.appendChild(details);
-    widget.appendChild(historyContainer);
-    
-    // Render initial demo data
-    const demoData = generatePriceHistoryData();
-    renderPriceChart(graph, demoData);
-    
-    // Initialize animation
-    initializeDetailsElements(widget);
+    return fetch(urls[index])
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`API-respons ikke OK: ${response.status}`);
+        }
+        return response.json();
+      })
+      .catch(() => {
+        // Try the next URL
+        return tryFetchUrls(urls, index + 1);
+      });
   }
   
   /**
    * Generates demo price history data for initial display
-   * Compliant with Norwegian price regulations
-   * Simulates a 90-day price history with proper pricing pattern
    */
   function generatePriceHistoryData() {
     const data = [];
@@ -908,12 +622,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const regularPrice = 1499;
     const salePrice = 999;
     
-    // Following Norwegian regulations:
-    // - Regular price must be used for a significant period before a sale
-    // - The 30-day reference price is critical for compliance
-    // - Sale periods should be limited in duration
-    
-    // Generate 90 days of price history with a compliant pattern
+    // Generate 90 days of price history
     for (let i = 90; i >= 0; i--) {
       const date = new Date(endDate);
       date.setDate(date.getDate() - i);
@@ -935,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
           compareAtPrice: regularPrice
         });
       }
-      // Days 39-31: Back to regular price (important for 30-day reference)
+      // Days 39-31: Back to regular price
       else if (i >= 31) {
         data.push({
           date: dateString,
@@ -957,590 +666,443 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   /**
-   * Fetches compliance data from the API
-   * Uses multiple URL formats for compatibility
-   */
-  function fetchComplianceData(widget, productId, variantId) {
-    const shopDomain = window.Shopify ? window.Shopify.shop : window.location.hostname;
-    
-    // Define API URL formats to try
-    const apiUrls = [
-      `/apps/compliance/${productId}/${variantId}?shop=${shopDomain}`,
-      `/apps/compliance/${variantId}?shop=${shopDomain}`,
-      `/apps/compliance?productId=${productId}&variantId=${variantId}&shop=${shopDomain}`,
-      `/api/compliance/${productId}/${variantId}?shop=${shopDomain}`
-    ];
-    
-    // Try each URL format in succession
-    tryFetchUrls(apiUrls, 0)
-      .then(data => {
-        if (!data.success) {
-          throw new Error(data.error || 'Unknown error');
-        }
-        
-        // Update compliance status
-        updateComplianceStatus(widget, data);
-        
-        // Update price history if we received it
-        if (data.priceHistory && data.priceHistory.length > 0) {
-          const historyElement = widget.querySelector('.price-history-graph');
-          if (historyElement) {
-            renderPriceChart(historyElement, data.priceHistory);
-          }
-        }
-      })
-      .catch(error => {
-        // Chart is already rendered with demo data, no further action needed
-      });
-  }
-  
-  /**
-   * Tries each URL in succession until one succeeds
-   */
-  function tryFetchUrls(urls, index) {
-    if (index >= urls.length) {
-      return Promise.reject(new Error('All API URLs failed'));
-    }
-    
-    return fetch(urls[index])
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`API response not OK: ${response.status}`);
-        }
-        return response.json();
-      })
-      .catch(() => {
-        // Try the next URL
-        return tryFetchUrls(urls, index + 1);
-      });
-  }
-  
-  /**
-   * Updates the compliance status display based on API response
-   */
-  function updateComplianceStatus(widget, data) {
-    const statusElement = widget.querySelector('.compliance-status');
-    if (!statusElement) return;
-    
-    // Update class
-    if (data.isCompliant) {
-      statusElement.classList.add('compliant');
-      statusElement.classList.remove('non-compliant');
-    } else {
-      statusElement.classList.add('non-compliant');
-      statusElement.classList.remove('compliant');
-    }
-    
-    // Update text content if we have specific issues
-    const textElement = statusElement.querySelector('.compliance-text');
-    if (textElement && data.issues && data.issues.length > 0) {
-      textElement.textContent = data.issues[0].message;
-    }
-  }
-  
-  /**
-   * Renders the price history chart with premium styling
-   * SVG-based visualization of price over time
+   * Renders an improved professional price chart
    */
   function renderPriceChart(element, priceData) {
+    // Try to get stored data first
+    if (!priceData) {
+      try {
+        const storedData = element.getAttribute('data-history-json');
+        if (storedData) {
+          priceData = JSON.parse(storedData);
+        }
+      } catch (e) {
+        console.error('Error parsing stored data', e);
+      }
+    }
+    
+    // If we still don't have data, generate demo data
+    if (!priceData || !Array.isArray(priceData) || priceData.length === 0) {
+      priceData = generatePriceHistoryData();
+    }
+    
     // Clear the element
     element.innerHTML = '';
     
-    if (!priceData || priceData.length === 0) {
-      element.innerHTML = '<div class="price-history-placeholder">No price history available</div>';
-      return;
-    }
+    // Create chart container
+    const chartContainer = document.createElement('div');
+    chartContainer.className = 'price-chart-container';
+    chartContainer.style.width = '100%';
+    chartContainer.style.height = '100%';
+    chartContainer.style.position = 'relative';
+    element.appendChild(chartContainer);
     
     try {
-      // Set dimensions with more padding for a more polished look
-      const width = element.clientWidth || 400;
-      const height = 200; // Increased height for better visualization
-      const padding = {
-        top: 35,
-        right: 25,
-        bottom: 35,
-        left: 45
-      };
+      // Set dimensions for the chart
+      const width = chartContainer.clientWidth || 500;
+      const height = chartContainer.clientHeight || 300;
       
-      // Calculate min and max values for scaling with better padding
-      const prices = priceData.map(d => parseFloat(d.price)).filter(p => !isNaN(p));
-      const comparePrices = priceData
-        .filter(d => d.compareAtPrice)
-        .map(d => parseFloat(d.compareAtPrice))
-        .filter(p => !isNaN(p));
+      // Create canvas for the chart instead of SVG for better performance
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      chartContainer.appendChild(canvas);
       
-      const allPrices = [...prices, ...comparePrices];
-      if (allPrices.length === 0) {
-        throw new Error('No valid price data found');
+      // Get the 2D context for drawing
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Kunne ikke få canvas-kontekst');
       }
       
-      // Add more padding to price range for better visualization
+      // Extract price data
+      const dates = priceData.map(d => {
+        try {
+          return new Date(d.date);
+        } catch (e) {
+          return null;
+        }
+      }).filter(d => d !== null);
+      
+      const prices = priceData.map(d => parseFloat(d.price)).filter(p => !isNaN(p));
+      
+      const comparePrices = priceData
+        .map((item, index) => {
+          if (item.compareAtPrice) {
+            return { 
+              index,
+              price: parseFloat(item.compareAtPrice) 
+            };
+          }
+          return null;
+        })
+        .filter(item => item !== null && !isNaN(item.price));
+      
+      // Calculate min and max values for the Y axis
+      const allPrices = [...prices, ...comparePrices.map(p => p.price)];
       const minPrice = Math.floor(Math.min(...allPrices) * 0.85);
       const maxPrice = Math.ceil(Math.max(...allPrices) * 1.15);
-      const priceRange = maxPrice - minPrice;
       
-      // Create SVG with enhanced styles
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('width', '100%');
-      svg.setAttribute('height', '100%');
-      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-      svg.style.overflow = 'visible'; 
-      element.appendChild(svg);
+      // Calculate padding and drawable area
+      const padding = {
+        top: 30,
+        right: 20,
+        bottom: 50,
+        left: 70
+      };
       
-      // Create a cleaner background with rounded corners
-      const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      background.setAttribute('x', 0);
-      background.setAttribute('y', 0);
-      background.setAttribute('width', width);
-      background.setAttribute('height', height);
-      background.setAttribute('rx', '6');
-      background.setAttribute('fill', '#f9f9f9');
-      svg.appendChild(background);
+      const drawableWidth = width - padding.left - padding.right;
+      const drawableHeight = height - padding.top - padding.bottom;
       
-      // Helper functions for scaling with improved padding
-      const scaleX = i => padding.left + ((width - padding.left - padding.right) * i / (priceData.length - 1));
-      const scaleY = price => height - padding.bottom - ((height - padding.top - padding.bottom) * (price - minPrice) / priceRange);
+      // Helper functions to convert data to coordinates
+      const getX = (index) => padding.left + (drawableWidth * index / (prices.length - 1));
+      const getY = (price) => padding.top + drawableHeight - (drawableHeight * (price - minPrice) / (maxPrice - minPrice));
       
-      // Draw more subtle grid lines with better spacing
-      const gridLineCount = 5;
-      for (let i = 0; i < gridLineCount; i++) {
-        const y = padding.top + (i * (height - padding.top - padding.bottom) / (gridLineCount - 1));
-        const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        gridLine.setAttribute('x1', padding.left);
-        gridLine.setAttribute('y1', y);
-        gridLine.setAttribute('x2', width - padding.right);
-        gridLine.setAttribute('y2', y);
-        gridLine.setAttribute('stroke', '#e5e5e5');
-        gridLine.setAttribute('stroke-width', '1');
-        svg.appendChild(gridLine);
+      // Draw background
+      ctx.fillStyle = '#f5f7fa';
+      ctx.fillRect(0, 0, width, height);
+      
+      // Draw grid lines
+      ctx.strokeStyle = '#e0e0e0';
+      ctx.lineWidth = 1;
+      
+      // Draw horizontal grid lines
+      const horizontalLineCount = 5;
+      for (let i = 0; i < horizontalLineCount; i++) {
+        const y = padding.top + (i * drawableHeight / (horizontalLineCount - 1));
         
-        // Add price labels on Y axis with better positioning
-        const priceValue = maxPrice - (i * priceRange / (gridLineCount - 1));
-        const priceLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        priceLabel.setAttribute('x', padding.left - 10);
-        priceLabel.setAttribute('y', y + 4); 
-        priceLabel.setAttribute('text-anchor', 'end');
-        priceLabel.setAttribute('font-size', '10');
-        priceLabel.setAttribute('fill', '#777');
-        priceLabel.textContent = priceValue.toFixed(0);
-        svg.appendChild(priceLabel);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+        
+        // Draw price labels
+        const price = maxPrice - (i * (maxPrice - minPrice) / (horizontalLineCount - 1));
+        ctx.fillStyle = '#666';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(price.toFixed(0), padding.left - 10, y);
       }
       
-      // Add Y-axis label
-      const yAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      yAxisLabel.setAttribute('x', 15);
-      yAxisLabel.setAttribute('y', height / 2);
-      yAxisLabel.setAttribute('font-size', '10');
-      yAxisLabel.setAttribute('fill', '#555');
-      yAxisLabel.setAttribute('text-anchor', 'middle');
-      yAxisLabel.setAttribute('transform', `rotate(-90, 15, ${height / 2})`);
-      yAxisLabel.textContent = 'Price';
-      svg.appendChild(yAxisLabel);
-      
-      // Draw axes with cleaner style
-      const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      xAxis.setAttribute('x1', padding.left);
-      xAxis.setAttribute('y1', height - padding.bottom);
-      xAxis.setAttribute('x2', width - padding.right);
-      xAxis.setAttribute('y2', height - padding.bottom);
-      xAxis.setAttribute('stroke', '#999');
-      xAxis.setAttribute('stroke-width', '1');
-      svg.appendChild(xAxis);
-      
-      const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      yAxis.setAttribute('x1', padding.left);
-      yAxis.setAttribute('y1', padding.top);
-      yAxis.setAttribute('x2', padding.left);
-      yAxis.setAttribute('y2', height - padding.bottom);
-      yAxis.setAttribute('stroke', '#999');
-      yAxis.setAttribute('stroke-width', '1');
-      svg.appendChild(yAxis);
-      
-      // Add improved date labels (evenly spaced)
-      const dateLabels = [0, Math.floor(priceData.length / 4), Math.floor(priceData.length / 2), 
-                        Math.floor(priceData.length * 3 / 4), priceData.length - 1];
-                        
-      dateLabels.forEach(index => {
-        if (priceData[index]) {
-          try {
-            const date = new Date(priceData[index].date);
-            const formattedDate = date.toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric'
-            });
-            
-            const dateLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            dateLabel.setAttribute('x', scaleX(index));
-            dateLabel.setAttribute('y', height - padding.bottom + 15);
-            dateLabel.setAttribute('text-anchor', 'middle');
-            dateLabel.setAttribute('font-size', '10');
-            dateLabel.setAttribute('fill', '#777');
-            dateLabel.textContent = formattedDate;
-            svg.appendChild(dateLabel);
-          } catch (e) {
-            // Skip invalid dates
-          }
-        }
-      });
-      
-      // Draw compare-at price line (dashed reference line) with improved styling
-      if (comparePrices.length > 0) {
-        // Get indices where compareAtPrice exists
-        const indices = priceData
-          .map((p, i) => p.compareAtPrice ? i : -1)
-          .filter(i => i !== -1);
+      // Draw vertical grid lines and date labels
+      const verticalLineCount = Math.min(6, prices.length);
+      for (let i = 0; i < verticalLineCount; i++) {
+        const index = Math.floor(i * (prices.length - 1) / (verticalLineCount - 1));
+        const x = getX(index);
         
-        if (indices.length > 0) {
-          // Create the polyline for the compare-at prices
-          const comparePolyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-          const points = indices.map(i => {
-            const price = parseFloat(priceData[i].compareAtPrice);
-            return `${scaleX(i)},${scaleY(price)}`;
-          }).join(' ');
+        // Draw vertical grid line
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, height - padding.bottom);
+        ctx.stroke();
+        
+        // Draw date label
+        if (dates[index]) {
+          const formattedDate = dates[index].toLocaleDateString('nb-NO', {
+            month: 'short',
+            day: 'numeric'
+          });
           
-          comparePolyline.setAttribute('points', points);
-          comparePolyline.setAttribute('fill', 'none');
-          comparePolyline.setAttribute('stroke', '#666');
-          comparePolyline.setAttribute('stroke-width', '2');
-          comparePolyline.setAttribute('stroke-dasharray', '4,4');
-          svg.appendChild(comparePolyline);
+          ctx.fillStyle = '#666';
+          ctx.font = '11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText(formattedDate, x, height - padding.bottom + 10);
         }
       }
       
-      // Add a subtle area under the price line
-      const priceArea = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      const areaPoints = priceData.map((d, i) => {
-        const price = parseFloat(d.price);
-        return `${scaleX(i)},${scaleY(price)}`;
-      }).join(' ');
+      // Draw axes
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
       
-      // Add points at the bottom to close the area
-      const areaPath = `M${padding.left},${height - padding.bottom} ` + 
-                       `L${priceData.map((d, i) => `${scaleX(i)},${scaleY(parseFloat(d.price))}`).join(' ')} ` +
-                       `L${width - padding.right},${height - padding.bottom} Z`;
-                       
-      priceArea.setAttribute('d', areaPath);
-      priceArea.setAttribute('fill', 'url(#price-gradient)');
-      priceArea.setAttribute('opacity', '0.2');
+      // X axis
+      ctx.beginPath();
+      ctx.moveTo(padding.left, height - padding.bottom);
+      ctx.lineTo(width - padding.right, height - padding.bottom);
+      ctx.stroke();
       
-      // Add gradient definition
-      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-      svg.appendChild(defs);
+      // Y axis
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, height - padding.bottom);
+      ctx.stroke();
       
-      const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-      gradient.setAttribute('id', 'price-gradient');
-      gradient.setAttribute('x1', '0%');
-      gradient.setAttribute('y1', '0%');
-      gradient.setAttribute('x2', '0%');
-      gradient.setAttribute('y2', '100%');
+      // Draw axis labels
+      ctx.fillStyle = '#666';
+      ctx.font = '12px sans-serif';
       
-      const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-      stop1.setAttribute('offset', '0%');
-      stop1.setAttribute('stop-color', '#008060');
+      // X axis label
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('Dato', width / 2, height - 15);
       
-      const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-      stop2.setAttribute('offset', '100%');
-      stop2.setAttribute('stop-color', '#008060');
-      stop2.setAttribute('stop-opacity', '0');
+      // Y axis label
+      ctx.save();
+      ctx.translate(20, height / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Pris (kr)', 0, 0);
+      ctx.restore();
       
-      gradient.appendChild(stop1);
-      gradient.appendChild(stop2);
-      defs.appendChild(gradient);
-      
-      svg.appendChild(priceArea);
-      
-      // Draw regular price line (solid line) with improved styling
-      const priceLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-      const points = priceData.map((d, i) => {
-        const price = parseFloat(d.price);
-        return `${scaleX(i)},${scaleY(price)}`;
-      }).join(' ');
-      
-      priceLine.setAttribute('points', points);
-      priceLine.setAttribute('fill', 'none');
-      priceLine.setAttribute('stroke', '#008060');
-      priceLine.setAttribute('stroke-width', '2.5');
-      priceLine.setAttribute('stroke-linecap', 'round');
-      priceLine.setAttribute('stroke-linejoin', 'round');
-      svg.appendChild(priceLine);
-      
-      // Add price markers with better spacing and hover effects
-      const markerCount = 5;
-      const markerIndices = [];
-      for (let i = 0; i < markerCount; i++) {
-        markerIndices.push(Math.floor(i * (priceData.length - 1) / (markerCount - 1)));
-      }
-      
-      // Create a group for markers to apply interactions
-      const markersGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      markersGroup.setAttribute('class', 'price-markers');
-      svg.appendChild(markersGroup);
-      
-      markerIndices.forEach(i => {
-        const price = parseFloat(priceData[i].price);
+      // Draw reference price line if it exists
+      if (comparePrices.length > 0) {
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
         
-        // Create marker group for each point
-        const markerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        markerGroup.setAttribute('class', 'marker-group');
-        markersGroup.appendChild(markerGroup);
+        ctx.beginPath();
+        let firstPoint = true;
         
-        // Larger hidden circle for better hover area
-        const hoverArea = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        hoverArea.setAttribute('cx', scaleX(i));
-        hoverArea.setAttribute('cy', scaleY(price));
-        hoverArea.setAttribute('r', '12');
-        hoverArea.setAttribute('fill', 'transparent');
-        markerGroup.appendChild(hoverArea);
-        
-        // Actual visible marker
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        marker.setAttribute('cx', scaleX(i));
-        marker.setAttribute('cy', scaleY(price));
-        marker.setAttribute('r', '4');
-        marker.setAttribute('fill', '#008060');
-        marker.setAttribute('stroke', 'white');
-        marker.setAttribute('stroke-width', '1.5');
-        markerGroup.appendChild(marker);
-        
-        // Create tooltip elements (initially hidden)
-        const tooltip = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        tooltip.setAttribute('opacity', '0');
-        tooltip.setAttribute('transform', `translate(${scaleX(i)}, ${scaleY(price) - 25})`);
-        markerGroup.appendChild(tooltip);
-        
-        // Tooltip background
-        const tooltipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        tooltipBg.setAttribute('x', -40);
-        tooltipBg.setAttribute('y', -20);
-        tooltipBg.setAttribute('width', '80');
-        tooltipBg.setAttribute('height', '25');
-        tooltipBg.setAttribute('rx', '4');
-        tooltipBg.setAttribute('fill', 'rgba(50, 50, 50, 0.85)');
-        tooltip.appendChild(tooltipBg);
-        
-        // Tooltip pointer
-        const tooltipPointer = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        tooltipPointer.setAttribute('d', 'M-6,-0 L6,-0 L0,6 Z');
-        tooltipPointer.setAttribute('fill', 'rgba(50, 50, 50, 0.85)');
-        tooltip.appendChild(tooltipPointer);
-        
-        // Tooltip price text
-        const tooltipText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        tooltipText.setAttribute('x', '0');
-        tooltipText.setAttribute('y', '-5');
-        tooltipText.setAttribute('text-anchor', 'middle');
-        tooltipText.setAttribute('font-size', '11');
-        tooltipText.setAttribute('fill', 'white');
-        tooltipText.textContent = priceData[i].price.toFixed(2);
-        tooltip.appendChild(tooltipText);
-        
-        // Add hover interactions
-        hoverArea.addEventListener('mouseenter', () => {
-          marker.setAttribute('r', '6');
-          tooltip.setAttribute('opacity', '1');
+        comparePrices.forEach(item => {
+          const x = getX(item.index);
+          const y = getY(item.price);
+          
+          if (firstPoint) {
+            ctx.moveTo(x, y);
+            firstPoint = false;
+          } else {
+            ctx.lineTo(x, y);
+          }
         });
         
-        hoverArea.addEventListener('mouseleave', () => {
-          marker.setAttribute('r', '4');
-          tooltip.setAttribute('opacity', '0');
-        });
-      });
-      
-      // Mark the start of sale period with improved visual
-      const saleStartIndex = priceData.findIndex(p => p.compareAtPrice !== null);
-      if (saleStartIndex > 0) {
-        // Add a gradient zone to highlight sale period
-        const saleZone = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        saleZone.setAttribute('x', scaleX(saleStartIndex));
-        saleZone.setAttribute('y', padding.top);
-        saleZone.setAttribute('width', width - padding.right - scaleX(saleStartIndex));
-        saleZone.setAttribute('height', height - padding.top - padding.bottom);
-        saleZone.setAttribute('fill', 'url(#sale-gradient)');
-        
-        // Define sale period gradient
-        const saleGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-        saleGradient.setAttribute('id', 'sale-gradient');
-        saleGradient.setAttribute('x1', '0%');
-        saleGradient.setAttribute('y1', '0%');
-        saleGradient.setAttribute('x2', '100%');
-        saleGradient.setAttribute('y2', '0%');
-        
-        const saleStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-        saleStop1.setAttribute('offset', '0%');
-        saleStop1.setAttribute('stop-color', '#D72C0D');
-        saleStop1.setAttribute('stop-opacity', '0.08');
-        
-        const saleStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-        saleStop2.setAttribute('offset', '100%');
-        saleStop2.setAttribute('stop-color', '#D72C0D');
-        saleStop2.setAttribute('stop-opacity', '0.02');
-        
-        saleGradient.appendChild(saleStop1);
-        saleGradient.appendChild(saleStop2);
-        defs.appendChild(saleGradient);
-        
-        // Insert sale zone before the price line
-        svg.insertBefore(saleZone, priceLine);
-        
-        // Create a visually distinct vertical line
-        const saleStartLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        saleStartLine.setAttribute('x1', scaleX(saleStartIndex));
-        saleStartLine.setAttribute('y1', padding.top);
-        saleStartLine.setAttribute('x2', scaleX(saleStartIndex));
-        saleStartLine.setAttribute('y2', height - padding.bottom);
-        saleStartLine.setAttribute('stroke', '#D72C0D');
-        saleStartLine.setAttribute('stroke-width', '1.5');
-        saleStartLine.setAttribute('stroke-dasharray', '4,4');
-        svg.appendChild(saleStartLine);
-        
-        // Add a more visible sale start label with fancy styling
-        const labelBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        labelBg.setAttribute('x', scaleX(saleStartIndex) - 35);
-        labelBg.setAttribute('y', padding.top - 22);
-        labelBg.setAttribute('width', '70');
-        labelBg.setAttribute('height', '18');
-        labelBg.setAttribute('rx', '9');
-        labelBg.setAttribute('fill', '#D72C0D');
-        labelBg.setAttribute('fill-opacity', '0.1');
-        labelBg.setAttribute('stroke', '#D72C0D');
-        labelBg.setAttribute('stroke-width', '1');
-        labelBg.setAttribute('stroke-opacity', '0.4');
-        svg.appendChild(labelBg);
-        
-        const saleLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        saleLabel.setAttribute('x', scaleX(saleStartIndex));
-        saleLabel.setAttribute('y', padding.top - 9);
-        saleLabel.setAttribute('text-anchor', 'middle');
-        saleLabel.setAttribute('font-size', '10');
-        saleLabel.setAttribute('fill', '#D72C0D');
-        saleLabel.setAttribute('font-weight', 'bold');
-        saleLabel.textContent = 'Sale Started';
-        svg.appendChild(saleLabel);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
       
-      // Add enhanced legend with improved styling
-      const legendX = 15;
+      // Draw area under the price line
+      ctx.beginPath();
+      ctx.moveTo(getX(0), getY(prices[0]));
+      
+      for (let i = 1; i < prices.length; i++) {
+        ctx.lineTo(getX(i), getY(prices[i]));
+      }
+      
+      ctx.lineTo(getX(prices.length - 1), height - padding.bottom);
+      ctx.lineTo(getX(0), height - padding.bottom);
+      ctx.closePath();
+      
+      // Create gradient for area fill
+      const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+      gradient.addColorStop(0, 'rgba(0, 102, 204, 0.2)');
+      gradient.addColorStop(1, 'rgba(0, 102, 204, 0.01)');
+      
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      // Draw price line
+      ctx.strokeStyle = '#0066CC';
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      ctx.beginPath();
+      ctx.moveTo(getX(0), getY(prices[0]));
+      
+      for (let i = 1; i < prices.length; i++) {
+        ctx.lineTo(getX(i), getY(prices[i]));
+      }
+      
+      ctx.stroke();
+      
+      // Add data points
+      const pointCount = Math.min(7, prices.length);
+      
+      for (let i = 0; i < pointCount; i++) {
+        const index = Math.floor(i * (prices.length - 1) / (pointCount - 1));
+        const x = getX(index);
+        const y = getY(prices[index]);
+        
+        // Draw point
+        ctx.fillStyle = '#0066CC';
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw white border
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      // Add legend
       const legendY = 15;
-      const legendWidth = 160;
-      const legendHeight = 50;
       
-      // Create legend background with shadow effect
-      const legendBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      legendBg.setAttribute('x', legendX);
-      legendBg.setAttribute('y', legendY);
-      legendBg.setAttribute('width', legendWidth);
-      legendBg.setAttribute('height', legendHeight);
-      legendBg.setAttribute('rx', '6');
-      legendBg.setAttribute('fill', 'white');
-      legendBg.setAttribute('stroke', '#eee');
-      legendBg.setAttribute('stroke-width', '1');
-      legendBg.setAttribute('filter', 'url(#legend-shadow)');
+      // Draw current price legend
+      ctx.fillStyle = 'white';
+      ctx.fillRect(padding.left, legendY, 160, 50);
+      ctx.strokeStyle = '#eee';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(padding.left, legendY, 160, 50);
       
-      // Add shadow filter
-      const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
-      filter.setAttribute('id', 'legend-shadow');
-      filter.setAttribute('x', '-20%');
-      filter.setAttribute('y', '-20%');
-      filter.setAttribute('width', '140%');
-      filter.setAttribute('height', '140%');
+      // Price line
+      ctx.strokeStyle = '#0066CC';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(padding.left + 15, legendY + 20);
+      ctx.lineTo(padding.left + 45, legendY + 20);
+      ctx.stroke();
       
-      const feDropShadow = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
-      feDropShadow.setAttribute('dx', '0');
-      feDropShadow.setAttribute('dy', '2');
-      feDropShadow.setAttribute('stdDeviation', '3');
-      feDropShadow.setAttribute('flood-color', 'rgba(0,0,0,0.1)');
-      filter.appendChild(feDropShadow);
-      defs.appendChild(filter);
+      // Price point
+      ctx.fillStyle = '#0066CC';
+      ctx.beginPath();
+      ctx.arc(padding.left + 30, legendY + 20, 4, 0, Math.PI * 2);
+      ctx.fill();
       
-      svg.appendChild(legendBg);
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(padding.left + 30, legendY + 20, 4, 0, Math.PI * 2);
+      ctx.stroke();
       
-      // Current price line in legend with dot
-      const priceLineLegend = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      priceLineLegend.setAttribute('x1', legendX + 15);
-      priceLineLegend.setAttribute('y1', legendY + 20);
-      priceLineLegend.setAttribute('x2', legendX + 35);
-      priceLineLegend.setAttribute('y2', legendY + 20);
-      priceLineLegend.setAttribute('stroke', '#008060');
-      priceLineLegend.setAttribute('stroke-width', '2.5');
-      priceLineLegend.setAttribute('stroke-linecap', 'round');
-      svg.appendChild(priceLineLegend);
+      // Price text
+      ctx.fillStyle = '#333';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Gjeldende pris', padding.left + 55, legendY + 20);
       
-      const priceDotLegend = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      priceDotLegend.setAttribute('cx', legendX + 25);
-      priceDotLegend.setAttribute('cy', legendY + 20);
-      priceDotLegend.setAttribute('r', '3');
-      priceDotLegend.setAttribute('fill', '#008060');
-      priceDotLegend.setAttribute('stroke', 'white');
-      priceDotLegend.setAttribute('stroke-width', '1');
-      svg.appendChild(priceDotLegend);
-      
-      const priceText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      priceText.setAttribute('x', legendX + 45);
-      priceText.setAttribute('y', legendY + 23);
-      priceText.setAttribute('font-size', '11');
-      priceText.setAttribute('fill', '#333');
-      priceText.textContent = 'Current Price';
-      svg.appendChild(priceText);
-      
-      // Reference price line in legend
-      const refLineLegend = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      refLineLegend.setAttribute('x1', legendX + 15);
-      refLineLegend.setAttribute('y1', legendY + 38);
-      refLineLegend.setAttribute('x2', legendX + 35);
-      refLineLegend.setAttribute('y2', legendY + 38);
-      refLineLegend.setAttribute('stroke', '#666');
-      refLineLegend.setAttribute('stroke-width', '2');
-      refLineLegend.setAttribute('stroke-dasharray', '4,4');
-      svg.appendChild(refLineLegend);
-      
-      const refText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      refText.setAttribute('x', legendX + 45);
-      refText.setAttribute('y', legendY + 41);
-      refText.setAttribute('font-size', '11');
-      refText.setAttribute('fill', '#333');
-      refText.textContent = 'Reference Price';
-      svg.appendChild(refText);
-      
-      // Add date range label with improved styling
-      if (priceData.length > 0) {
-        // Format start and end dates
-        let startDate, endDate;
-        try {
-          startDate = new Date(priceData[0].date);
-          endDate = new Date(priceData[priceData.length - 1].date);
-        } catch (e) {
-          const today = new Date();
-          endDate = today;
-          startDate = new Date(today);
-          startDate.setDate(startDate.getDate() - 90);
-        }
+      // Reference price line
+      if (comparePrices.length > 0) {
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(padding.left + 15, legendY + 35);
+        ctx.lineTo(padding.left + 45, legendY + 35);
+        ctx.stroke();
+        ctx.setLineDash([]);
         
-        // Format dates to locale format
+        // Reference price text
+        ctx.fillStyle = '#333';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Referansepris', padding.left + 55, legendY + 35);
+      }
+      
+      // Add date range text
+      if (dates.length > 0) {
+        const startDate = dates[0];
+        const endDate = dates[dates.length - 1];
+        
         const formatDate = (date) => {
-          return date.toLocaleDateString(undefined, {
+          return date.toLocaleDateString('nb-NO', {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
           });
         };
         
-        // Add date range text below chart with better styling
-        const dateRangeDiv = document.createElement('div');
-        dateRangeDiv.style.fontSize = '11px';
-        dateRangeDiv.style.color = '#666';
-        dateRangeDiv.style.textAlign = 'center';
-        dateRangeDiv.style.marginTop = '12px';
-        dateRangeDiv.style.padding = '6px 10px';
-        dateRangeDiv.style.backgroundColor = 'rgba(0,0,0,0.03)';
-        dateRangeDiv.style.borderRadius = '4px';
-        dateRangeDiv.style.fontWeight = '500';
-        dateRangeDiv.textContent = `Price history from ${formatDate(startDate)} to ${formatDate(endDate)}`;
-        element.appendChild(dateRangeDiv);
+        const dateRangeText = `Prishistorikk fra ${formatDate(startDate)} til ${formatDate(endDate)}`;
+        
+        ctx.fillStyle = '#666';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(dateRangeText, width / 2, height - 4);
       }
       
+      // Create interactive hover tooltip using an overlay
+      const overlay = document.createElement('div');
+      overlay.style.position = 'absolute';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.cursor = 'pointer';
+      chartContainer.appendChild(overlay);
+      
+      // Create tooltip
+      const tooltip = document.createElement('div');
+      tooltip.className = 'price-tooltip';
+      tooltip.style.position = 'absolute';
+      tooltip.style.display = 'none';
+      tooltip.style.padding = '6px 10px';
+      tooltip.style.backgroundColor = 'rgba(50, 50, 50, 0.9)';
+      tooltip.style.color = 'white';
+      tooltip.style.borderRadius = '4px';
+      tooltip.style.fontSize = '12px';
+      tooltip.style.pointerEvents = 'none';
+      tooltip.style.zIndex = '100';
+      tooltip.style.whiteSpace = 'nowrap';
+      tooltip.style.transform = 'translate(-50%, -100%)';
+      tooltip.style.marginTop = '-5px';
+      chartContainer.appendChild(tooltip);
+      
+      // Add mousemove handler for the tooltip
+      overlay.addEventListener('mousemove', function(e) {
+        const rect = overlay.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        
+        // Only show tooltip in the drawable area
+        if (x < padding.left || x > width - padding.right) {
+          tooltip.style.display = 'none';
+          return;
+        }
+        
+        // Find the closest data point
+        const index = Math.round((x - padding.left) / drawableWidth * (prices.length - 1));
+        
+        if (index >= 0 && index < prices.length) {
+          const dataX = getX(index);
+          const dataY = getY(prices[index]);
+          
+          // Position tooltip
+          tooltip.style.left = `${dataX}px`;
+          tooltip.style.top = `${dataY}px`;
+          
+          // Format date
+          let dateStr = 'Ukjent dato';
+          if (dates[index]) {
+            dateStr = dates[index].toLocaleDateString('nb-NO', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            });
+          }
+          
+          // Format price
+          const priceStr = prices[index].toFixed(2).replace('.', ',');
+          
+          // Calculate percentage difference if reference price exists
+          let percentageStr = '';
+          if (priceData[index] && priceData[index].compareAtPrice) {
+            const comparePrice = parseFloat(priceData[index].compareAtPrice);
+            if (!isNaN(comparePrice) && comparePrice > 0) {
+              const percentage = Math.round((comparePrice - prices[index]) / comparePrice * 100);
+              percentageStr = ` (${percentage}% rabatt)`;
+            }
+          }
+          
+          // Set tooltip content
+          tooltip.textContent = `${dateStr}: ${priceStr} kr${percentageStr}`;
+          tooltip.style.display = 'block';
+        } else {
+          tooltip.style.display = 'none';
+        }
+      });
+      
+      // Hide tooltip when mouse leaves
+      overlay.addEventListener('mouseleave', function() {
+        tooltip.style.display = 'none';
+      });
+      
     } catch (error) {
-      // Handle errors gracefully
-      element.innerHTML = '<div class="price-history-placeholder">Unable to render price history chart</div>';
+      console.error('Chart rendering error:', error);
+      
+      // Show error message
+      element.innerHTML = `
+        <div class="price-history-placeholder">
+          <svg viewBox="0 0 24 24" width="24" height="24" style="color: #999;">
+            <path fill="currentColor" d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM13,17h-2v-2h2v2zM13,13h-2L11,7h2l0,6z"/>
+          </svg>
+          <span>Kunne ikke vise prishistorikk-grafen</span>
+        </div>
+      `;
     }
   }
 });
